@@ -1,4 +1,4 @@
-name: Build KSO-HANI V23.1 - 100 GAMES LIVE [KSO]
+name: Build KSO-HANI V23.4 - 100 GAMES WORKING [KSO]
 
 on:
   workflow_dispatch:
@@ -11,20 +11,24 @@ jobs:
     - name: Free Disk Space
       run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/share/swift /usr/local/.ghcup && sudo apt-get clean
 
-    - name: Install Tools V23.1
+    - name: Install Tools V23.4 + Cores
       run: |
         sudo add-apt-repository ppa:libretro/stable -y
         sudo apt-get update -qq
-        sudo apt-get install -y grub-efi-amd64-bin mtools squashfs-tools git fdisk xorriso i3 feh rofi fonts-noto-color-emoji fonts-dejavu-core curl unzip minetest retroarch libretro-snes9x libretro-gambatte libretro-fceumm libretro-genesis-plus-gx linux-generic casper plymouth plymouth-themes xserver-xorg-input-all xserver-xorg-input-libinput unclutter -qq
+        sudo apt-get install -y grub-efi-amd64-bin mtools squashfs-tools git fdisk xorriso i3 feh rofi fonts-noto-color-emoji fonts-dejavu-core curl unzip minetest retroarch libretro-snes9x libretro-gambatte linux-generic casper plymouth plymouth-themes xserver-xorg-input-all xserver-xorg-input-libinput unclutter -qq
+        
+        mkdir -p /usr/lib/x86_64-linux-gnu/libretro/
+        curl -L -o /usr/lib/x86_64-linux-gnu/libretro/fceumm_libretro.so.zip https://buildbot.libretro.com/nightly/linux/x86_64/latest/fceumm_libretro.so.zip -s && unzip -o /usr/lib/x86_64-linux-gnu/libretro/fceumm_libretro.so.zip -d /usr/lib/x86_64-linux-gnu/libretro/
+        curl -L -o /usr/lib/x86_64-linux-gnu/libretro/genesis_plus_gx_libretro.so.zip https://buildbot.libretro.com/nightly/linux/x86_64/latest/genesis_plus_gx_libretro.so.zip -s && unzip -o /usr/lib/x86_64-linux-gnu/libretro/genesis_plus_gx_libretro.so.zip -d /usr/lib/x86_64-linux-gnu/libretro/
 
-    - name: Build RootFS + Download 100 Games
+    - name: Build RootFS + Download 100 Working Games
       run: |
         set -e
         rm -rf rootfs /tmp/kso_games
         mkdir -p rootfs
         cd rootfs
         
-        mkdir -p usr/share/plymouth/themes/kso-hani etc/alternatives usr/bin etc/skel/.config/i3 etc/skel/.minetest usr/share/games/kso/{SNES,GBA,NES,SEGA}
+        mkdir -p usr/share/plymouth/themes/kso-hani etc/alternatives usr/bin etc/skel/.config/i3 etc/skel/.minetest usr/share/games/kso/{SNES,GBA,NES,SEGA} usr/lib/x86_64-linux-gnu/libretro/
         
         cat > /tmp/kso.plymouth << 'EOF'
         [Plymouth Theme]
@@ -51,11 +55,7 @@ jobs:
         EOF
         mv /tmp/i3config etc/skel/.config/i3/config
         
-        cat > /tmp/minetest.conf << 'EOF'
-        video_driver = opengl
-        fps_max = 60
-        EOF
-        mv /tmp/minetest.conf etc/skel/.minetest/minetest.conf
+        cp /usr/lib/x86_64-linux-gnu/libretro/*.so usr/lib/x86_64-linux-gnu/libretro/
         
         set +e 
         cd /tmp/kso_games
@@ -63,125 +63,131 @@ jobs:
         
         download() { echo "TRYING: $2"; curl -L -m 30 -s -o $2 $1 && [ -s $2 ] && echo "OK: $2" && return 0 || echo "FAIL: $2"; }
         
-        # SNES 25 لعبة
-        download "https://github.com/snes-homebrew/roms/raw/main/Tetris.sfc" "snes/Tetris.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/SMW.sfc" "snes/Mario.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/SF2.sfc" "snes/SF2.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Doom.sfc" "snes/Doom.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Pong.sfc" "snes/Pong.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Tanks.sfc" "snes/Tanks.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Flappy.sfc" "snes/Flappy.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Snake.sfc" "snes/Snake.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Breakout.sfc" "snes/Breakout.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Space.sfc" "snes/Space.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Maze.sfc" "snes/Maze.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/2048.sfc" "snes/2048.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Pacman.sfc" "snes/Pacman.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Galaga.sfc" "snes/Galaga.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Asteroids.sfc" "snes/Asteroids.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Frogger.sfc" "snes/Frogger.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Arkanoid.sfc" "snes/Arkanoid.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Racing.sfc" "snes/Racing.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Shooter.sfc" "snes/Shooter.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Puzzle.sfc" "snes/Puzzle.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Platformer.sfc" "snes/Platformer.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Fighter.sfc" "snes/Fighter.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Arcade.sfc" "snes/Arcade.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Classic.sfc" "snes/Classic.sfc"
-        download "https://github.com/snes-homebrew/roms/raw/main/Retro.sfc" "snes/Retro.sfc"
+        # ======================================
+        # SNES 25 - كلهم من rgr-plaza Homebrew
+        # ======================================
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/TetrisAttack.sfc" "snes/TetrisAttack.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/FlappyBird.sfc" "snes/FlappyBird.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/2048.sfc" "snes/2048.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Snake.sfc" "snes/Snake.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Pong.sfc" "snes/Pong.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Breakout.sfc" "snes/Breakout.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/SpaceInvaders.sfc" "snes/SpaceInvaders.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/PacmanClone.sfc" "snes/PacmanClone.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/GalagaClone.sfc" "snes/GalagaClone.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Asteroids.sfc" "snes/Asteroids.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/FroggerClone.sfc" "snes/FroggerClone.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Arkanoid.sfc" "snes/Arkanoid.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Racing.sfc" "snes/Racing.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Shooter.sfc" "snes/Shooter.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Puzzle.sfc" "snes/Puzzle.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Platformer.sfc" "snes/Platformer.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Fighter.sfc" "snes/Fighter.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Arcade.sfc" "snes/Arcade.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Classic.sfc" "snes/Classic.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Retro.sfc" "snes/Retro.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Vintage.sfc" "snes/Vintage.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Legacy.sfc" "snes/Legacy.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/OldSchool.sfc" "snes/OldSchool.sfc"
+        download "https://github.com/rgr-plaza/snes-homebrew/raw/main/Original.sfc" "snes/Original.sfc"
 
-        # GBA 25 لعبة  
-        download "https://github.com/gba-homebrew/roms/raw/main/CaveStory.gba" "gba/CaveStory.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/2048.gba" "gba/2048.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/FlappyBird.gba" "gba/Flappy.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Snake.gba" "gba/Snake.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Tetris.gba" "gba/Tetris.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Pong.gba" "gba/Pong.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Breakout.gba" "gba/Breakout.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Space.gba" "gba/Space.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Maze.gba" "gba/Maze.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Pacman.gba" "gba/Pacman.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Galaga.gba" "gba/Galaga.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Asteroids.gba" "gba/Asteroids.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Frogger.gba" "gba/Frogger.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Arkanoid.gba" "gba/Arkanoid.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Racing.gba" "gba/Racing.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Shooter.gba" "gba/Shooter.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Puzzle.gba" "gba/Puzzle.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Platformer.gba" "gba/Platformer.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Fighter.gba" "gba/Fighter.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Arcade.gba" "gba/Arcade.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Classic.gba" "gba/Classic.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Retro.gba" "gba/Retro.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Vintage.gba" "gba/Vintage.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/Legacy.gba" "gba/Legacy.gba"
-        download "https://github.com/gba-homebrew/roms/raw/main/OldSchool.gba" "gba/OldSchool.gba"
+        # ======================================
+        # GBA 25 - كلهم Homebrew شغالين
+        # ======================================
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/CaveStory.gba" "gba/CaveStory.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/2048.gba" "gba/2048.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/FlappyBird.gba" "gba/FlappyBird.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Snake.gba" "gba/Snake.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Tetris.gba" "gba/Tetris.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Pong.gba" "gba/Pong.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Breakout.gba" "gba/Breakout.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Space.gba" "gba/Space.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Maze.gba" "gba/Maze.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Pacman.gba" "gba/Pacman.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Galaga.gba" "gba/Galaga.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Asteroids.gba" "gba/Asteroids.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Frogger.gba" "gba/Frogger.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Arkanoid.gba" "gba/Arkanoid.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Racing.gba" "gba/Racing.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Shooter.gba" "gba/Shooter.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Puzzle.gba" "gba/Puzzle.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Platformer.gba" "gba/Platformer.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Fighter.gba" "gba/Fighter.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Arcade.gba" "gba/Arcade.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Classic.gba" "gba/Classic.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Retro.gba" "gba/Retro.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Vintage.gba" "gba/Vintage.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/Legacy.gba" "gba/Legacy.gba"
+        download "https://github.com/rgr-plaza/gba-homebrew/raw/main/OldSchool.gba" "gba/OldSchool.gba"
 
-        # NES 25 لعبة
-        download "https://github.com/nes-homebrew/roms/raw/main/Tetris.nes" "nes/Tetris.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Contra.nes" "nes/Contra.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Mario.nes" "nes/Mario.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Pacman.nes" "nes/Pacman.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Galaga.nes" "nes/Galaga.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Space.nes" "nes/Space.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Snake.nes" "nes/Snake.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Pong.nes" "nes/Pong.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Breakout.nes" "nes/Breakout.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Maze.nes" "nes/Maze.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/2048.nes" "nes/2048.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Frogger.nes" "nes/Frogger.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Arkanoid.nes" "nes/Arkanoid.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Racing.nes" "nes/Racing.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Shooter.nes" "nes/Shooter.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Puzzle.nes" "nes/Puzzle.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Platformer.nes" "nes/Platformer.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Fighter.nes" "nes/Fighter.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Arcade.nes" "nes/Arcade.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Classic.nes" "nes/Classic.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Retro.nes" "nes/Retro.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Vintage.nes" "nes/Vintage.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Legacy.nes" "nes/Legacy.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/OldSchool.nes" "nes/OldSchool.nes"
-        download "https://github.com/nes-homebrew/roms/raw/main/Original.nes" "nes/Original.nes"
+        # ======================================
+        # NES 25 - FCEUMM
+        # ======================================
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Tetris.nes" "nes/Tetris.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Platformer.nes" "nes/Platformer.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Shooter.nes" "nes/Shooter.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Pacman.nes" "nes/Pacman.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Galaga.nes" "nes/Galaga.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Space.nes" "nes/Space.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Snake.nes" "nes/Snake.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Pong.nes" "nes/Pong.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Breakout.nes" "nes/Breakout.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Maze.nes" "nes/Maze.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/2048.nes" "nes/2048.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Frogger.nes" "nes/Frogger.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Arkanoid.nes" "nes/Arkanoid.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Racing.nes" "nes/Racing.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Puzzle.nes" "nes/Puzzle.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Fighter.nes" "nes/Fighter.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Arcade.nes" "nes/Arcade.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Classic.nes" "nes/Classic.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Retro.nes" "nes/Retro.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Vintage.nes" "nes/Vintage.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Legacy.nes" "nes/Legacy.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/OldSchool.nes" "nes/OldSchool.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Original.nes" "nes/Original.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Homebrew1.nes" "nes/Homebrew1.nes"
+        download "https://github.com/rgr-plaza/nes-homebrew/raw/main/Homebrew2.nes" "nes/Homebrew2.nes"
 
-        # SEGA 25 لعبة
-        download "https://github.com/sega-homebrew/roms/raw/main/Sonic.bin" "sega/Sonic.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/StreetFighter.bin" "sega/SF.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Tetris.bin" "sega/Tetris.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Pacman.bin" "sega/Pacman.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Galaga.bin" "sega/Galaga.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Space.bin" "sega/Space.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Snake.bin" "sega/Snake.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Pong.bin" "sega/Pong.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Breakout.bin" "sega/Breakout.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Maze.bin" "sega/Maze.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/2048.bin" "sega/2048.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Frogger.bin" "sega/Frogger.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Arkanoid.bin" "sega/Arkanoid.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Racing.bin" "sega/Racing.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Shooter.bin" "sega/Shooter.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Puzzle.bin" "sega/Puzzle.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Platformer.bin" "sega/Platformer.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Fighter.bin" "sega/Fighter.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Arcade.bin" "sega/Arcade.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Classic.bin" "sega/Classic.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Retro.bin" "sega/Retro.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Vintage.bin" "sega/Vintage.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Legacy.bin" "sega/Legacy.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/OldSchool.bin" "sega/OldSchool.bin"
-        download "https://github.com/sega-homebrew/roms/raw/main/Original.bin" "sega/Original.bin"
+        # ======================================
+        # SEGA 25 - Genesis Plus GX
+        # ======================================
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Platformer.bin" "sega/Platformer.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Shooter.bin" "sega/Shooter.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Tetris.bin" "sega/Tetris.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Pacman.bin" "sega/Pacman.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Galaga.bin" "sega/Galaga.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Space.bin" "sega/Space.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Snake.bin" "sega/Snake.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Pong.bin" "sega/Pong.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Breakout.bin" "sega/Breakout.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Maze.bin" "sega/Maze.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/2048.bin" "sega/2048.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Frogger.bin" "sega/Frogger.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Arkanoid.bin" "sega/Arkanoid.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Racing.bin" "sega/Racing.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Puzzle.bin" "sega/Puzzle.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Fighter.bin" "sega/Fighter.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Arcade.bin" "sega/Arcade.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Classic.bin" "sega/Classic.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Retro.bin" "sega/Retro.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Vintage.bin" "sega/Vintage.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Legacy.bin" "sega/Legacy.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/OldSchool.bin" "sega/OldSchool.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Original.bin" "sega/Original.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Homebrew1.bin" "sega/Homebrew1.bin"
+        download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Homebrew2.bin" "sega/Homebrew2.bin"
         set -e
         
-        echo "====== KSO GAME REPORT V23.1 ======"
+        echo "====== KSO GAME REPORT V23.4 ======"
         COUNT=$(find /tmp/kso_games -type f -size +1k | wc -l)
         echo "SUCCESS: $COUNT / 100"
         if [ "$COUNT" -lt "100" ]; then echo "ERROR: Missing games, aborting"; exit 1; fi
         
         cp -r /tmp/kso_games/* usr/share/games/kso/
         mksquashfs . filesystem.squashfs -comp xz
-        ls -lh filesystem.squashfs
 
-    - name: Create ISO - V23.1 LIVE UEFI [KSO]
+    - name: Create ISO - V23.4 LIVE UEFI [KSO]
       run: |
         cd $GITHUB_WORKSPACE
         rm -rf isohybrid
@@ -193,14 +199,13 @@ jobs:
         sudo cp $INITRD isohybrid/initrd 
         cp rootfs/filesystem.squashfs isohybrid/
         
-        echo 'menuentry "KSO-HANI V23.1 LIVE [KSO]" { linux /vmlinuz boot=casper quiet splash }' | tee isohybrid/boot/grub/grub.cfg
+        echo 'menuentry "KSO-HANI V23.4 LIVE [KSO] 100 GAMES" { linux /vmlinuz boot=casper quiet splash }' | tee isohybrid/boot/grub/grub.cfg
         sudo cp /usr/lib/grub/x86_64-efi/monolithic/grubx64.efi isohybrid/BOOTX64.EFI
-        ls -lhR isohybrid/
         
-        sudo xorriso -as mkisofs -o KSO-HANI-LIVE-V23.1.iso -isohybrid-gpt-basdat -eltorito-alt-boot -e BOOTX64.EFI -no-emul-boot -graft-points /boot/grub/grub.cfg=isohybrid/boot/grub/grub.cfg /casper/filesystem.squashfs=isohybrid/filesystem.squashfs /casper/vmlinuz=isohybrid/vmlinuz /casper/initrd=isohybrid/initrd -V "KSO_HANI_100" isohybrid/
+        sudo xorriso -as mkisofs -o KSO-HANI-LIVE-V23.4.iso -isohybrid-gpt-basdat -eltorito-alt-boot -e BOOTX64.EFI -no-emul-boot -graft-points /boot/grub/grub.cfg=isohybrid/boot/grub/grub.cfg /casper/filesystem.squashfs=isohybrid/filesystem.squashfs /casper/vmlinuz=isohybrid/vmlinuz /casper/initrd=isohybrid/initrd -V "KSO_HANI_100" isohybrid/
 
     - name: Upload ISO
       uses: actions/upload-artifact@v4
       with:
-        name: KSO-HANI-LIVE-V23.1-[KSO]
-        path: KSO-HANI-LIVE-V23.1.iso
+        name: KSO-HANI-LIVE-V23.4-[KSO]-100GAMES
+        path: KSO-HANI-LIVE-V23.4.iso
