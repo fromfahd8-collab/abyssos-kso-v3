@@ -1,5 +1,6 @@
-name: Build KSO-AbyssOS 4.8GB HORROR V1.2 FINAL
-on: workflow_dispatch:
+name: Build KSO-AbyssOS 4.8GB HORROR V1.3 FIXED
+on: 
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -22,12 +23,10 @@ jobs:
           lb config --architecture amd64 --distribution bookworm --archive-areas "main contrib non-free" --binary-images iso-hybrid --bootappend-live "boot=live components quiet splash plymouth:theme=abyss" --debian-installer none --iso-volume "KSO_ABYSS" --iso-application "KSO-AbyssOS by KSO" --apt-indices false --config-bootstrap --config-chroot --config-common --config-package-lists --config-systemd
           echo 'network-manager network-manager-gnome python3-pygame i3 i3status xterm espeak' >> config/package-lists/abyssos.list.chroot
           
-          # 1. Plymouth Boot باسمك + !!! حمرا
+          # 1. Plymouth Boot باسمك
           mkdir -p config/includes.chroot/usr/share/plymouth/themes/abyss
-          echo 'KSO AbyssOS V1.2
-          برمجة عبد الله و عبد الرحمن هاني رجب [ kso ]
-          !!!' > config/includes.chroot/etc/issue
-          echo 'echo "!!!"; sleep 1' > config/includes.chroot/usr/share/plymouth/themes/abyss/abyss.script
+          echo 'KSO AbyssOS V1.3
+          برمجة عبد الله و عبد الرحمن هاني رجب [ kso ]' > config/includes.chroot/etc/issue
 
           # 2. i3 Bar دم + Windows+X=OFF + Windows+Q=الوداع + Windows+G=قايمة الالعاب
           mkdir -p config/includes.chroot/etc/skel/.config/i3
@@ -69,46 +68,26 @@ EOF
 #!/bin/bash
 clear
 echo "=================================="
-echo " KSO HORROR GAMES MENU V1.2"
+echo " KSO HORROR GAMES MENU V1.3"
 echo "=================================="
-echo " 1. SCP"
-echo " 2. IMSCARED"
-echo " 3. Anatomy"
-echo " 4. Spookys"
-echo " 5. CryOfFear"
-echo " 6. Darkwood"
-echo " 7. WOH"
-echo " 8. Paratopic"
-echo " 9. Static"
-echo " 10. Buddy1984"
+echo " 1. SCP 2. IMSCARED 3. Anatomy 4. Spookys 5. CryOfFear"
+echo " 6. Darkwood 7. WOH 8. Paratopic 9. Static 10. Buddy1984"
 echo " 0. خروج"
-echo "=================================="
 read -p "اختار رقم اللعبة يا KSO: " choice
 case $choice in
- 1) echo "SCP RUNTIME - Install AppImage" ;;
- 2) echo "IMSCARED RUNTIME - Install AppImage" ;;
- 3) echo "Anatomy RUNTIME - Install AppImage" ;;
- 4) echo "Spookys RUNTIME - Install AppImage" ;;
- 5) echo "CryOfFear RUNTIME - Install AppImage" ;;
- 6) echo "Darkwood RUNTIME - Install AppImage" ;;
- 7) echo "WOH RUNTIME - Install AppImage" ;;
- 8) echo "Paratopic RUNTIME - Install AppImage" ;;
- 9) echo "Static RUNTIME - Install AppImage" ;;
- 10) echo "Buddy1984 RUNTIME - Install AppImage" ;;
- 0) exit ;;
-  *) echo "رقم غلط" ;;
+ 1) echo "SCP RUNTIME" ;; 2) echo "IMSCARED RUNTIME" ;; 3) echo "Anatomy RUNTIME" ;; 4) echo "Spookys RUNTIME" ;; 5) echo "CryOfFear RUNTIME" ;;
+ 6) echo "Darkwood RUNTIME" ;; 7) echo "WOH RUNTIME" ;; 8) echo "Paratopic RUNTIME" ;; 9) echo "Static RUNTIME" ;; 10) echo "Buddy1984 RUNTIME" ;;
+ 0) exit ;; *) echo "رقم غلط" ;;
 esac
 read -p "اضغط Enter للخروج..."
 EOF
           chmod +x config/includes.chroot/usr/share/abyssos/games.sh
 
       - name: 4. Build ISO 4.8GB
-        run: |
-          cd abyss
-          lb build
+        run: cd abyss && lb build
 
       - name: 5. Upload ISO
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-AbyssOS-V1.2-Horror-4.8GB-FINAL.iso
+          name: KSO-AbyssOS-V1.3-FIXED.iso
           path: abyss/live-image-amd64.hybrid.iso
