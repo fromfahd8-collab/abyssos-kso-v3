@@ -1,4 +1,4 @@
-name: Build KSO-AbyssOS 4.8GB HORROR V1.5 KSO
+name: Build KSO-AbyssOS 4.8GB HORROR V1.6 KSO
 on: 
   workflow_dispatch:
 jobs:
@@ -20,12 +20,13 @@ jobs:
           set -e
           mkdir -p abyss && cd abyss
           lb clean
-          lb config --architecture amd64 --distribution bookworm --archive-areas "main contrib non-free" --binary-images iso-hybrid --bootappend-live "boot=live components quiet splash" --debian-installer none --iso-volume "KSO_ABYSS" --iso-application "KSO-AbyssOS by KSO" --apt-indices false --config-bootstrap --config-chroot --config-common --config-package-lists --config-systemd
+          # شلنا كل --config- اللي بايظة
+          lb config --architecture amd64 --distribution bookworm --archive-areas "main contrib non-free" --binary-images iso-hybrid --bootappend-live "boot=live components quiet splash" --debian-installer none --iso-volume "KSO_ABYSS" --iso-application "KSO-AbyssOS by KSO"
           echo 'network-manager network-manager-gnome python3-pygame i3 i3status xterm espeak' >> config/package-lists/abyssos.list.chroot
           
           # 1. اسمك في البوت
           mkdir -p config/includes.chroot/etc
-          echo 'KSO AbyssOS V1.5
+          echo 'KSO AbyssOS V1.6
           برمجة عبد الله و عبد الرحمن هاني رجب [ kso ]' > config/includes.chroot/etc/issue
 
           # 2. i3 Bar دم + Windows+X=OFF + Windows+Q=الوداع + Windows+G=قايمة الالعاب
@@ -66,7 +67,7 @@ jobs:
           echo '#!/bin/bash' > config/includes.chroot/usr/share/abyssos/games.sh
           echo 'clear' >> config/includes.chroot/usr/share/abyssos/games.sh
           echo 'echo "=================================="' >> config/includes.chroot/usr/share/abyssos/games.sh
-          echo 'echo " KSO HORROR GAMES MENU V1.5"' >> config/includes.chroot/usr/share/abyssos/games.sh
+          echo 'echo " KSO HORROR GAMES MENU V1.6"' >> config/includes.chroot/usr/share/abyssos/games.sh
           echo 'echo "=================================="' >> config/includes.chroot/usr/share/abyssos/games.sh
           echo 'echo " 1. SCP 2. IMSCARED 3. Anatomy 4. Spookys 5. CryOfFear"' >> config/includes.chroot/usr/share/abyssos/games.sh
           echo 'echo " 6. Darkwood 7. WOH 8. Paratopic 9. Static 10. Buddy1984"' >> config/includes.chroot/usr/share/abyssos/games.sh
@@ -86,5 +87,5 @@ jobs:
       - name: 5. Upload ISO
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-AbyssOS-V1.5-KSO.iso
+          name: KSO-AbyssOS-V1.6-KSO.iso
           path: abyss/live-image-amd64.hybrid.iso
