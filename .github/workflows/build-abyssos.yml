@@ -1,4 +1,4 @@
-name: Build KSO-AbyssOS 4.8GB HORROR V1.3 FIXED
+name: Build KSO-AbyssOS 4.8GB HORROR V1.4 KSO
 on: 
   workflow_dispatch:
 jobs:
@@ -20,37 +20,42 @@ jobs:
           set -e
           mkdir -p abyss && cd abyss
           lb clean
-          lb config --architecture amd64 --distribution bookworm --archive-areas "main contrib non-free" --binary-images iso-hybrid --bootappend-live "boot=live components quiet splash plymouth:theme=abyss" --debian-installer none --iso-volume "KSO_ABYSS" --iso-application "KSO-AbyssOS by KSO" --apt-indices false --config-bootstrap --config-chroot --config-common --config-package-lists --config-systemd
+          lb config --architecture amd64 --distribution bookworm --archive-areas "main contrib non-free" --binary-images iso-hybrid --bootappend-live "boot=live components quiet splash" --debian-installer none --iso-volume "KSO_ABYSS" --iso-application "KSO-AbyssOS by KSO" --apt-indices false --config-bootstrap --config-chroot --config-common --config-package-lists --config-systemd
           echo 'network-manager network-manager-gnome python3-pygame i3 i3status xterm espeak' >> config/package-lists/abyssos.list.chroot
           
-          # 1. Plymouth Boot باسمك
-          mkdir -p config/includes.chroot/usr/share/plymouth/themes/abyss
-          echo 'KSO AbyssOS V1.3
+          # 1. اسمك في البوت
+          mkdir -p config/includes.chroot/etc
+          echo 'KSO AbyssOS V1.4
           برمجة عبد الله و عبد الرحمن هاني رجب [ kso ]' > config/includes.chroot/etc/issue
 
           # 2. i3 Bar دم + Windows+X=OFF + Windows+Q=الوداع + Windows+G=قايمة الالعاب
           mkdir -p config/includes.chroot/etc/skel/.config/i3
-          echo 'set $mod Mod4
-          bar {
-            status_command i3status
-            colors { statusline #FF0000 background #000 }
-          }
-          bindsym $mod+x exec pkill -f jump.py
-          bindsym $mod+q exec espeak -v ar "الوداع" && poweroff
-          bindsym $mod+g exec xterm -bg black -fg red -e /usr/share/abyssos/games.sh' > config/includes.chroot/etc/skel/.config/i3/config
+          cat > config/includes.chroot/etc/skel/.config/i3/config << 'I3EOF'
+set $mod Mod4
+bar {
+  status_command i3status
+  colors { statusline #FF0000 background #000000 }
+}
+bindsym $mod+x exec pkill -f jump.py
+bindsym $mod+q exec espeak -v ar "الوداع" && poweroff
+bindsym $mod+g exec xterm -bg black -fg red -e /usr/share/abyssos/games.sh
+I3EOF
           echo 'DMI KSO-WATCHING' > config/includes.chroot/etc/i3status.conf
 
           # 3. Xterm الاحمر اول دخول
           mkdir -p config/includes.chroot/etc/skel/.config/autostart
-          echo '[Desktop Entry]
-          Type=Application
-          Exec=xterm -bg black -fg red -e "echo أنت لست وحدك هنا... KSO; bash"' > config/includes.chroot/etc/skel/.config/autostart/xterm.desktop
+          cat > config/includes.chroot/etc/skel/.config/autostart/xterm.desktop << 'DESKEOF'
+[Desktop Entry]
+Type=Application
+Exec=xterm -bg black -fg red -e "echo أنت لست وحدك هنا... KSO; bash"
+DESKEOF
 
           # 4. JumpScare كل 2-7 دقايق + صوت عربي + تيرمينال
           mkdir -p config/includes.chroot/usr/share/abyssos/jumpscare config/includes.chroot/usr/share/abyssos/sounds config/includes.chroot/etc/skel/.config/autostart
-          for i in {1..10}; do wget -qO config/includes.chroot/usr/share/abyssos/jumpscare/$i.png "https://placehold.co/1920x1080/000/FF0000/png?text=لقد+رأيتك+$i"; done
+          for i in {1..10}; do wget -qO config/includes.chroot/usr/share/abyssos/jumpscare/$i.png "https://placehold.co/1920x1080/000/FF0000/png?text=KSO+$i"; done
           echo "وراك" | espeak -v ar -w config/includes.chroot/usr/share/abyssos/sounds/scream.ogg -s 60 -p 10
-          cat > config/includes.chroot/usr/share/abyssos/jumpscare/jump.py << 'EOF'
+          
+          cat > config/includes.chroot/usr/share/abyssos/jumpscare/jump.py << 'PYEOF'
 import pygame,random,time,os,subprocess
 pygame.init(); pygame.mixer.init(); pygame.mixer.music.load("/usr/share/abyssos/sounds/scream.ogg")
 while True:
@@ -58,17 +63,20 @@ while True:
  subprocess.Popen(["xterm","-bg","red","-fg","black","-e","echo لقد رأيتك; sleep 2"])
  pygame.mixer.music.play(); img=pygame.image.load(random.choice([f"/usr/share/abyssos/jumpscare/{i}.png" for i in range(1,11)]))
  s=pygame.display.set_mode((0,0),pygame.FULLSCREEN); s.blit(pygame.transform.scale(img,s.get_size()),(0,0)); pygame.display.flip(); time.sleep(5); pygame.quit(); pygame.init()
-EOF
-          echo '[Desktop Entry]
-          Type=Application
-          Exec=python3 /usr/share/abyssos/jumpscare/jump.py' > config/includes.chroot/etc/skel/.config/autostart/jump.desktop
+PYEOF
+          
+          cat > config/includes.chroot/etc/skel/.config/autostart/jump.desktop << 'JUMPEOF'
+[Desktop Entry]
+Type=Application
+Exec=python3 /usr/share/abyssos/jumpscare/jump.py
+JUMPEOF
 
           # 5. سكريبت قايمة الالعاب Windows+G
-          cat > config/includes.chroot/usr/share/abyssos/games.sh << 'EOF'
+          cat > config/includes.chroot/usr/share/abyssos/games.sh << 'GAMEEOF'
 #!/bin/bash
 clear
 echo "=================================="
-echo " KSO HORROR GAMES MENU V1.3"
+echo " KSO HORROR GAMES MENU V1.4"
 echo "=================================="
 echo " 1. SCP 2. IMSCARED 3. Anatomy 4. Spookys 5. CryOfFear"
 echo " 6. Darkwood 7. WOH 8. Paratopic 9. Static 10. Buddy1984"
@@ -80,7 +88,7 @@ case $choice in
  0) exit ;; *) echo "رقم غلط" ;;
 esac
 read -p "اضغط Enter للخروج..."
-EOF
+GAMEEOF
           chmod +x config/includes.chroot/usr/share/abyssos/games.sh
 
       - name: 4. Build ISO 4.8GB
@@ -89,5 +97,5 @@ EOF
       - name: 5. Upload ISO
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-AbyssOS-V1.3-FIXED.iso
+          name: KSO-AbyssOS-V1.4-KSO.iso
           path: abyss/live-image-amd64.hybrid.iso
