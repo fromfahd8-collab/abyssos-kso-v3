@@ -1,4 +1,4 @@
-name: Build KSO-AbyssOS 4.8GB HORROR V1.4 KSO
+name: Build KSO-AbyssOS 4.8GB HORROR V1.5 KSO
 on: 
   workflow_dispatch:
 jobs:
@@ -15,7 +15,7 @@ jobs:
       - name: 2. Install Tools + 10 Games Horror
         run: sudo apt-get update -qq && sudo apt-get install -y live-build debootstrap squashfs-tools xorriso wget git unzip espeak sox imagemagick i3 i3status xterm python3-pygame network-manager network-manager-gnome -qq
 
-      - name: 3. Configure AbyssOS + KSO BRANDING + RAGE
+      - name: 3. Configure AbyssOS + KSO BRANDING
         run: |
           set -e
           mkdir -p abyss && cd abyss
@@ -25,70 +25,59 @@ jobs:
           
           # 1. اسمك في البوت
           mkdir -p config/includes.chroot/etc
-          echo 'KSO AbyssOS V1.4
+          echo 'KSO AbyssOS V1.5
           برمجة عبد الله و عبد الرحمن هاني رجب [ kso ]' > config/includes.chroot/etc/issue
 
           # 2. i3 Bar دم + Windows+X=OFF + Windows+Q=الوداع + Windows+G=قايمة الالعاب
           mkdir -p config/includes.chroot/etc/skel/.config/i3
-          cat > config/includes.chroot/etc/skel/.config/i3/config << 'I3EOF'
-set $mod Mod4
-bar {
-  status_command i3status
-  colors { statusline #FF0000 background #000000 }
-}
-bindsym $mod+x exec pkill -f jump.py
-bindsym $mod+q exec espeak -v ar "الوداع" && poweroff
-bindsym $mod+g exec xterm -bg black -fg red -e /usr/share/abyssos/games.sh
-I3EOF
+          echo 'set $mod Mod4' > config/includes.chroot/etc/skel/.config/i3/config
+          echo 'bar {' >> config/includes.chroot/etc/skel/.config/i3/config
+          echo '  status_command i3status' >> config/includes.chroot/etc/skel/.config/i3/config
+          echo '  colors { statusline #FF0000 background #000 }' >> config/includes.chroot/etc/skel/.config/i3/config
+          echo '}' >> config/includes.chroot/etc/skel/.config/i3/config
+          echo 'bindsym $mod+x exec pkill -f jump.py' >> config/includes.chroot/etc/skel/.config/i3/config
+          echo 'bindsym $mod+q exec espeak -v ar "الوداع" && poweroff' >> config/includes.chroot/etc/skel/.config/i3/config
+          echo 'bindsym $mod+g exec xterm -bg black -fg red -e /usr/share/abyssos/games.sh' >> config/includes.chroot/etc/skel/.config/i3/config
           echo 'DMI KSO-WATCHING' > config/includes.chroot/etc/i3status.conf
 
           # 3. Xterm الاحمر اول دخول
           mkdir -p config/includes.chroot/etc/skel/.config/autostart
-          cat > config/includes.chroot/etc/skel/.config/autostart/xterm.desktop << 'DESKEOF'
-[Desktop Entry]
-Type=Application
-Exec=xterm -bg black -fg red -e "echo أنت لست وحدك هنا... KSO; bash"
-DESKEOF
+          echo '[Desktop Entry]' > config/includes.chroot/etc/skel/.config/autostart/xterm.desktop
+          echo 'Type=Application' >> config/includes.chroot/etc/skel/.config/autostart/xterm.desktop
+          echo 'Exec=xterm -bg black -fg red -e "echo أنت لست وحدك هنا... KSO; bash"' >> config/includes.chroot/etc/skel/.config/autostart/xterm.desktop
 
-          # 4. JumpScare كل 2-7 دقايق + صوت عربي + تيرمينال
+          # 4. JumpScare كل 2-7 دقايق
           mkdir -p config/includes.chroot/usr/share/abyssos/jumpscare config/includes.chroot/usr/share/abyssos/sounds config/includes.chroot/etc/skel/.config/autostart
           for i in {1..10}; do wget -qO config/includes.chroot/usr/share/abyssos/jumpscare/$i.png "https://placehold.co/1920x1080/000/FF0000/png?text=KSO+$i"; done
           echo "وراك" | espeak -v ar -w config/includes.chroot/usr/share/abyssos/sounds/scream.ogg -s 60 -p 10
-          
-          cat > config/includes.chroot/usr/share/abyssos/jumpscare/jump.py << 'PYEOF'
-import pygame,random,time,os,subprocess
-pygame.init(); pygame.mixer.init(); pygame.mixer.music.load("/usr/share/abyssos/sounds/scream.ogg")
-while True:
- time.sleep(random.randint(120,420))
- subprocess.Popen(["xterm","-bg","red","-fg","black","-e","echo لقد رأيتك; sleep 2"])
- pygame.mixer.music.play(); img=pygame.image.load(random.choice([f"/usr/share/abyssos/jumpscare/{i}.png" for i in range(1,11)]))
- s=pygame.display.set_mode((0,0),pygame.FULLSCREEN); s.blit(pygame.transform.scale(img,s.get_size()),(0,0)); pygame.display.flip(); time.sleep(5); pygame.quit(); pygame.init()
-PYEOF
-          
-          cat > config/includes.chroot/etc/skel/.config/autostart/jump.desktop << 'JUMPEOF'
-[Desktop Entry]
-Type=Application
-Exec=python3 /usr/share/abyssos/jumpscare/jump.py
-JUMPEOF
+          echo 'import pygame,random,time,os,subprocess' > config/includes.chroot/usr/share/abyssos/jumpscare/jump.py
+          echo 'pygame.init(); pygame.mixer.init(); pygame.mixer.music.load("/usr/share/abyssos/sounds/scream.ogg")' >> config/includes.chroot/usr/share/abyssos/jumpscare/jump.py
+          echo 'while True:' >> config/includes.chroot/usr/share/abyssos/jumpscare/jump.py
+          echo ' time.sleep(random.randint(120,420))' >> config/includes.chroot/usr/share/abyssos/jumpscare/jump.py
+          echo ' subprocess.Popen(["xterm","-bg","red","-fg","black","-e","echo لقد رأيتك; sleep 2"])' >> config/includes.chroot/usr/share/abyssos/jumpscare/jump.py
+          echo ' pygame.mixer.music.play(); img=pygame.image.load(random.choice([f"/usr/share/abyssos/jumpscare/{i}.png" for i in range(1,11)]))' >> config/includes.chroot/usr/share/abyssos/jumpscare/jump.py
+          echo ' s=pygame.display.set_mode((0,0),pygame.FULLSCREEN); s.blit(pygame.transform.scale(img,s.get_size()),(0,0)); pygame.display.flip(); time.sleep(5); pygame.quit(); pygame.init()' >> config/includes.chroot/usr/share/abyssos/jumpscare/jump.py
+          echo '[Desktop Entry]' > config/includes.chroot/etc/skel/.config/autostart/jump.desktop
+          echo 'Type=Application' >> config/includes.chroot/etc/skel/.config/autostart/jump.desktop
+          echo 'Exec=python3 /usr/share/abyssos/jumpscare/jump.py' >> config/includes.chroot/etc/skel/.config/autostart/jump.desktop
 
           # 5. سكريبت قايمة الالعاب Windows+G
-          cat > config/includes.chroot/usr/share/abyssos/games.sh << 'GAMEEOF'
-#!/bin/bash
-clear
-echo "=================================="
-echo " KSO HORROR GAMES MENU V1.4"
-echo "=================================="
-echo " 1. SCP 2. IMSCARED 3. Anatomy 4. Spookys 5. CryOfFear"
-echo " 6. Darkwood 7. WOH 8. Paratopic 9. Static 10. Buddy1984"
-echo " 0. خروج"
-read -p "اختار رقم اللعبة يا KSO: " choice
-case $choice in
- 1) echo "SCP RUNTIME" ;; 2) echo "IMSCARED RUNTIME" ;; 3) echo "Anatomy RUNTIME" ;; 4) echo "Spookys RUNTIME" ;; 5) echo "CryOfFear RUNTIME" ;;
- 6) echo "Darkwood RUNTIME" ;; 7) echo "WOH RUNTIME" ;; 8) echo "Paratopic RUNTIME" ;; 9) echo "Static RUNTIME" ;; 10) echo "Buddy1984 RUNTIME" ;;
- 0) exit ;; *) echo "رقم غلط" ;;
-esac
-read -p "اضغط Enter للخروج..."
-GAMEEOF
+          mkdir -p config/includes.chroot/usr/share/abyssos
+          echo '#!/bin/bash' > config/includes.chroot/usr/share/abyssos/games.sh
+          echo 'clear' >> config/includes.chroot/usr/share/abyssos/games.sh
+          echo 'echo "=================================="' >> config/includes.chroot/usr/share/abyssos/games.sh
+          echo 'echo " KSO HORROR GAMES MENU V1.5"' >> config/includes.chroot/usr/share/abyssos/games.sh
+          echo 'echo "=================================="' >> config/includes.chroot/usr/share/abyssos/games.sh
+          echo 'echo " 1. SCP 2. IMSCARED 3. Anatomy 4. Spookys 5. CryOfFear"' >> config/includes.chroot/usr/share/abyssos/games.sh
+          echo 'echo " 6. Darkwood 7. WOH 8. Paratopic 9. Static 10. Buddy1984"' >> config/includes.chroot/usr/share/abyssos/games.sh
+          echo 'echo " 0. خروج"' >> config/includes.chroot/usr/share/abyssos/games.sh
+          echo 'read -p "اختار رقم اللعبة يا KSO: " choice' >> config/includes.chroot/usr/share/abyssos/games.sh
+          echo 'case $choice in' >> config/includes.chroot/usr/share/abyssos/games.sh
+          echo ' 1) echo "SCP RUNTIME" ;; 2) echo "IMSCARED RUNTIME" ;; 3) echo "Anatomy RUNTIME" ;; 4) echo "Spookys RUNTIME" ;; 5) echo "CryOfFear RUNTIME" ;;' >> config/includes.chroot/usr/share/abyssos/games.sh
+          echo ' 6) echo "Darkwood RUNTIME" ;; 7) echo "WOH RUNTIME" ;; 8) echo "Paratopic RUNTIME" ;; 9) echo "Static RUNTIME" ;; 10) echo "Buddy1984 RUNTIME" ;;' >> config/includes.chroot/usr/share/abyssos/games.sh
+          echo ' 0) exit ;; *) echo "رقم غلط" ;;' >> config/includes.chroot/usr/share/abyssos/games.sh
+          echo 'esac' >> config/includes.chroot/usr/share/abyssos/games.sh
+          echo 'read -p "اضغط Enter للخروج..."' >> config/includes.chroot/usr/share/abyssos/games.sh
           chmod +x config/includes.chroot/usr/share/abyssos/games.sh
 
       - name: 4. Build ISO 4.8GB
@@ -97,5 +86,5 @@ GAMEEOF
       - name: 5. Upload ISO
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-AbyssOS-V1.4-KSO.iso
+          name: KSO-AbyssOS-V1.5-KSO.iso
           path: abyss/live-image-amd64.hybrid.iso
