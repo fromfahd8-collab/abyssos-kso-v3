@@ -1,4 +1,4 @@
-name: Build KSO-HANI V23.5 - 100 GAMES FIXED [KSO]
+name: Build KSO-HANI V23.6 - PERMISSION FIXED [KSO]
 
 on:
   workflow_dispatch:
@@ -11,21 +11,23 @@ jobs:
     - name: Free Disk Space
       run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/share/swift /usr/local/.ghcup && sudo apt-get clean
 
-    - name: Install Tools V23.5 + Cores FIXED
+    - name: Install Tools V23.6 + Cores PERMISSION FIX
       run: |
         sudo add-apt-repository ppa:libretro/stable -y
         sudo apt-get update -qq
         sudo apt-get install -y grub-efi-amd64-bin mtools squashfs-tools git fdisk xorriso i3 feh rofi fonts-noto-color-emoji fonts-dejavu-core curl unzip minetest retroarch libretro-snes9x libretro-gambatte linux-generic casper plymouth plymouth-themes xserver-xorg-input-all xserver-xorg-input-libinput unclutter wget -qq
         
-        mkdir -p /usr/lib/x86_64-linux-gnu/libretro/
+        sudo mkdir -p /usr/lib/x86_64-linux-gnu/libretro/
         cd /usr/lib/x86_64-linux-gnu/libretro/
         
-        # الحل: wget + فحص الحجم + بديل لو فشل
-        wget -O fceumm.zip https://buildbot.libretro.com/nightly/linux/x86_64/latest/fceumm_libretro.so.zip
-        if [ $(stat -c%s fceumm.zip) -gt 1000000 ]; then unzip -o fceumm.zip; else echo "FCEUMM FAIL, using apt"; sudo apt-get install -y libretro-fceumm; fi
+        # الحل: sudo wget + sudo chmod 777 قبل unzip
+        sudo wget -O fceumm.zip https://buildbot.libretro.com/nightly/linux/x86_64/latest/fceumm_libretro.so.zip
+        sudo chmod 777 fceumm.zip 
+        if [ $(stat -c%s fceumm.zip) -gt 1000000 ]; then sudo unzip -o fceumm.zip; else echo "FCEUMM FAIL, using apt"; sudo apt-get install -y libretro-fceumm; fi
         
-        wget -O genesis.zip https://buildbot.libretro.com/nightly/linux/x86_64/latest/genesis_plus_gx_libretro.so.zip
-        if [ $(stat -c%s genesis.zip) -gt 1000000 ]; then unzip -o genesis.zip; else echo "GENESIS FAIL, using apt"; sudo apt-get install -y libretro-genesis-plus-gx; fi
+        sudo wget -O genesis.zip https://buildbot.libretro.com/nightly/linux/x86_64/latest/genesis_plus_gx_libretro.so.zip
+        sudo chmod 777 genesis.zip
+        if [ $(stat -c%s genesis.zip) -gt 1000000 ]; then sudo unzip -o genesis.zip; else echo "GENESIS FAIL, using apt"; sudo apt-get install -y libretro-genesis-plus-gx; fi
 
     - name: Build RootFS + Download 100 Working Games
       run: |
@@ -61,7 +63,7 @@ jobs:
         EOF
         mv /tmp/i3config etc/skel/.config/i3/config
         
-        cp /usr/lib/x86_64-linux-gnu/libretro/*.so usr/lib/x86_64-linux-gnu/libretro/
+        sudo cp /usr/lib/x86_64-linux-gnu/libretro/*.so usr/lib/x86_64-linux-gnu/libretro/
         
         set +e 
         cd /tmp/kso_games
@@ -162,6 +164,7 @@ jobs:
         download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Maze.bin" "sega/Maze.bin"
         download "https://github.com/rgr-plaza/sega-homebrew/raw/main/2048.bin" "sega/2048.bin"
         download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Frogger.bin" "sega/Frogger.bin"
+        download "https://archive.org/download/sega-md-homebrew/Maze.bin" "sega/Maze.bin"
         download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Arkanoid.bin" "sega/Arkanoid.bin"
         download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Racing.bin" "sega/Racing.bin"
         download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Puzzle.bin" "sega/Puzzle.bin"
@@ -177,7 +180,7 @@ jobs:
         download "https://github.com/rgr-plaza/sega-homebrew/raw/main/Homebrew2.bin" "sega/Homebrew2.bin"
         set -e
         
-        echo "====== KSO GAME REPORT V23.5 ======"
+        echo "====== KSO GAME REPORT V23.6 ======"
         COUNT=$(find /tmp/kso_games -type f -size +1k | wc -l)
         echo "SUCCESS: $COUNT / 100"
         if [ "$COUNT" -lt "100" ]; then echo "ERROR: Missing games, aborting"; exit 1; fi
@@ -185,7 +188,7 @@ jobs:
         cp -r /tmp/kso_games/* usr/share/games/kso/
         mksquashfs . filesystem.squashfs -comp xz
 
-    - name: Create ISO - V23.5 LIVE UEFI [KSO]
+    - name: Create ISO - V23.6 LIVE UEFI [KSO]
       run: |
         cd $GITHUB_WORKSPACE
         rm -rf isohybrid
@@ -197,13 +200,13 @@ jobs:
         sudo cp $INITRD isohybrid/initrd 
         cp rootfs/filesystem.squashfs isohybrid/
         
-        echo 'menuentry "KSO-HANI V23.5 LIVE [KSO] 100 GAMES" { linux /vmlinuz boot=casper quiet splash }' | tee isohybrid/boot/grub/grub.cfg
+        echo 'menuentry "KSO-HANI V23.6 LIVE [KSO] 100 GAMES" { linux /vmlinuz boot=casper quiet splash }' | tee isohybrid/boot/grub/grub.cfg
         sudo cp /usr/lib/grub/x86_64-efi/monolithic/grubx64.efi isohybrid/BOOTX64.EFI
         
-        sudo xorriso -as mkisofs -o KSO-HANI-LIVE-V23.5.iso -isohybrid-gpt-basdat -eltorito-alt-boot -e BOOTX64.EFI -no-emul-boot -graft-points /boot/grub/grub.cfg=isohybrid/boot/grub/grub.cfg /casper/filesystem.squashfs=isohybrid/filesystem.squashfs /casper/vmlinuz=isohybrid/vmlinuz /casper/initrd=isohybrid/initrd -V "KSO_HANI_100" isohybrid/
+        sudo xorriso -as mkisofs -o KSO-HANI-LIVE-V23.6.iso -isohybrid-gpt-basdat -eltorito-alt-boot -e BOOTX64.EFI -no-emul-boot -graft-points /boot/grub/grub.cfg=isohybrid/boot/grub/grub.cfg /casper/filesystem.squashfs=isohybrid/filesystem.squashfs /casper/vmlinuz=isohybrid/vmlinuz /casper/initrd=isohybrid/initrd -V "KSO_HANI_100" isohybrid/
 
     - name: Upload ISO
       uses: actions/upload-artifact@v4
       with:
-        name: KSO-HANI-LIVE-V23.5-[KSO]-100GAMES
-        path: KSO-HANI-LIVE-V23.5.iso
+        name: KSO-HANI-LIVE-V23.6-[KSO]-100GAMES
+        path: KSO-HANI-LIVE-V23.6.iso
