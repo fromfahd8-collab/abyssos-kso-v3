@@ -1,4 +1,4 @@
-name: Build KSO-HANI V34.FINAL3 - GUARANTEED [KSO]
+name: Build KSO-HANI V34.FINAL4 - WORKS [KSO]
 on: workflow_dispatch
 
 jobs:
@@ -12,23 +12,25 @@ jobs:
 
       - name: Build RootFS + Kernel [KSO]
         run: |
-          # 1. rootfs مينيمال
+          # 1. rootfs + universe
           sudo debootstrap --arch=amd64 noble rootfs http://archive.ubuntu.com/ubuntu/
-          
-          # 2. افتح universe يدوي [KSO] ده حل الخطأ 986 نهائي
           echo 'deb http://archive.ubuntu.com/ubuntu noble main universe' | sudo tee rootfs/etc/apt/sources.list
           sudo chroot rootfs apt-get update
           
-          # 3. نزل كله مرة واحدة
-          sudo chroot rootfs apt-get install -y --no-install-recommends linux-generic gnome-games lzip i3 minetest
+          # 2. نزل الكيرنل + الالعاب + i3
+          sudo chroot rootfs apt-get install -y --no-install-recommends linux-generic gnome-games lzip i3 minetest initramfs-tools
           
-          # 4. خد الكيرنل + initrd
+          # 3. خد الكيرنل
           mkdir -p iso/boot
           sudo cp rootfs/boot/vmlinuz-* iso/boot/vmlinuz
-          sudo cp rootfs/boot/initrd.img-* iso/boot/initrd.img
+          
+          # 4. [KSO] ده حل الخطأ 2343: نولد initrd بنفسنا
+          KERNEL_VER=$(ls rootfs/boot/vmlinuz-* | sed 's/.*vmlinuz-//')
+          sudo chroot rootfs update-initramfs -c -k $KERNEL_VER
+          sudo cp rootfs/boot/initrd.img-$KERNEL_VER iso/boot/initrd.img
           ls -lh iso/boot/
 
-          # 5. i3
+          # 5. i3 + اختصارات
           mkdir -p rootfs/etc/skel/.config/i3
           echo 'bindsym $mod+g exec gnome-games' | sudo tee rootfs/etc/skel/.config/i3/config
           echo 'bindsym $mod+m exec minetest' | sudo tee -a rootfs/etc/skel/.config/i3/config
@@ -42,7 +44,7 @@ jobs:
           mkdir -p iso/casper
           sudo mksquashfs rootfs iso/casper/filesystem.squashfs -comp xz -b 1048576 -no-xattrs
 
-          # 8. GRUB باسمك
+          # 8. GRUB
           mkdir -p iso/boot/grub
           cat > iso/boot/grub/grub.cfg <<'EOF'
           set timeout=5
@@ -50,19 +52,19 @@ jobs:
           set menu_color_normal=cyan/black
           set menu_color_highlight=white/cyan
           echo "========================================"
-          echo " KSO-HANI V34.FINAL3 [KSO]"
+          echo " KSO-HANI V34.FINAL4 [KSO]"
           echo " kso برمجة عبد الله و عبد الرحمن هاني"
           echo "========================================"
-          menuentry "KSO-HANI V34.FINAL3 Live [KSO]" {
+          menuentry "KSO-HANI V34.FINAL4 Live [KSO]" {
             linux /boot/vmlinuz boot=casper quiet splash
             initrd /boot/initrd.img
           }
           EOF
-          grub-mkrescue -o KSO-HANI-V34.FINAL3.iso iso
-          ls -lh KSO-HANI-V34.FINAL3.iso
+          grub-mkrescue -o KSO-HANI-V34.FINAL4.iso iso
+          ls -lh KSO-HANI-V34.FINAL4.iso
 
       - name: Upload ISO [KSO]
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-HANI-V34.FINAL3-[KSO]
-          path: KSO-HANI-V34.FINAL3.iso
+          name: KSO-HANI-V34.FINAL4-[KSO]
+          path: KSO-HANI-V34.FINAL4.iso
