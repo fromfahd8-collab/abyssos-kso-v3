@@ -1,4 +1,4 @@
-name: Build KSO-HANI V32.0 - NO CD [KSO]
+name: Build KSO-HANI V33.1 - 10 GAMES [KSO]
 
 on:
   workflow_dispatch:
@@ -12,12 +12,11 @@ jobs:
       run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/share/swift /usr/local/.ghcup
 
     - name: Install Tools
-      run: sudo apt-get update -qq && sudo apt-get install -y grub-efi-amd64-bin mtools squashfs-tools xorriso i3 feh rofi fonts-dejavu-core minetest retroarch libretro-snes9x libretro-gambatte linux-generic casper initramfs-tools unzip wget -qq
+      run: sudo apt-get update -qq && sudo apt-get install -y grub-efi-amd64-bin mtools squashfs-tools xorriso i3 feh rofi fonts-dejavu-core minetest retroarch libretro-snes9x libretro-gambatte linux-generic casper initramfs-tools wget unzip -qq
 
-    - name: Build ISO 410MB V32.0
+    - name: Build ISO 410MB V33.1
       run: |
         set -ex
-        # V32.0 FIX: مفيش cd خالص. كله بمسار كامل
         mkdir -p rootfs/usr/share/games/kso/snes rootfs/usr/share/games/kso/gba rootfs/usr/share/libretro/content/snes rootfs/usr/share/libretro/content/gba rootfs/usr/share/minetest/games rootfs/usr/share/plymouth/themes/kso rootfs/etc/skel/.config/i3 rootfs/usr/bin rootfs/etc/alternatives 
         
         echo '[Plymouth Theme]\nName=KSO-HANI\nDescription=برمجة عبد الله و عبد الرحمن هاني [ kso ]\nModuleName=script' > rootfs/usr/share/plymouth/themes/kso/kso.plymouth
@@ -27,33 +26,37 @@ jobs:
         echo 'systemctl poweroff' > rootfs/usr/bin/kso-shutdown && chmod +x rootfs/usr/bin/kso-shutdown
         echo 'set $mod Mod4\nexec --no-startup-id xsetroot -solid "#0F172A"\nbindsym $mod+g exec retroarch -D /usr/share/libretro/content\nbindsym $mod+m exec minetest\nbindsym $mod+q exec kso-shutdown\nbindsym $mod+d exec rofi -show drun' > rootfs/etc/skel/.config/i3/config
         
-        wget -q https://github.com/minetest/minetest_game/archive/master.zip -O /tmp/mg.zip
-        unzip -q /tmp/mg.zip -d rootfs/usr/share/minetest/games/ && mv rootfs/usr/share/minetest/games/minetest_game-master rootfs/usr/share/minetest/games/minetest_game
-        
-        wget -q https://github.com/libretro/test-roms/archive/refs/heads/master.zip -O /tmp/roms.zip
-        unzip -q /tmp/roms.zip -d /tmp/
-        
-        cp /tmp/test-roms-master/snes/*.sfc rootfs/usr/share/games/kso/snes/
-        cp /tmp/test-roms-master/gba/*.gba rootfs/usr/share/games/kso/gba/
-        cp /tmp/test-roms-master/snes/*.sfc rootfs/usr/share/libretro/content/snes/
-        cp /tmp/test-roms-master/gba/*.gba rootfs/usr/share/libretro/content/gba/
-        
+        # V33.1 FIX: 10 العاب Homebrew مجانية من Github
+        wget -q https://github.com/vgmoose/2048-snes/releases/download/v1.0/2048.sfc -O rootfs/usr/share/games/kso/snes/2048.sfc
+        wget -q https://github.com/wozmon/SNES-Pong/releases/download/v1.0/Pong.sfc -O rootfs/usr/share/games/kso/snes/Pong.sfc
+        wget -q https://github.com/Optiroc/SNES-Bomberman-Clone/releases/download/v1.0/Bomber.sfc -O rootfs/usr/share/games/kso/snes/Bomber.sfc
+        wget -q https://github.com/retrio/snes-demos/raw/main/roms/snes-test.sfc -O rootfs/usr/share/games/kso/snes/test.sfc
+        wget -q https://github.com/alttpo/snes-music-demos/raw/main/roms/demo.sfc -O rootfs/usr/share/games/kso/snes/demo.sfc
+
+        wget -q https://github.com/GValiente/butano/releases/download/v15.2/butano-examples.zip -O /tmp/gba.zip
+        unzip -q /tmp/gba.zip "examples/*/bin/*.gba" -d /tmp/gba/
+        cp /tmp/gba/examples/*/bin/*.gba rootfs/usr/share/games/kso/gba/
+
+        cp rootfs/usr/share/games/kso/snes/*.sfc rootfs/usr/share/libretro/content/snes/
+        cp rootfs/usr/share/games/kso/gba/*.gba rootfs/usr/share/libretro/content/gba/
+
         COUNT=$(find rootfs/usr/share/libretro/content -type f | wc -l)
         echo "GAMES COUNT: $COUNT / 10"
         if [ "$COUNT" -lt "10" ]; then echo "ERROR: GAMES NOT FOUND"; exit 1; fi
+
+        wget -q https://github.com/minetest/minetest_game/archive/master.zip -O /tmp/mg.zip
+        unzip -q /tmp/mg.zip -d rootfs/usr/share/minetest/games/ && mv rootfs/usr/share/minetest/games/minetest_game-master rootfs/usr/share/minetest/games/minetest_game
         
         mksquashfs rootfs filesystem.squashfs -comp xz -b 1048576
-        ls -lh filesystem.squashfs 
-        
         mkdir iso && mkdir iso/boot/grub iso/casper iso/EFI/BOOT
         cp filesystem.squashfs iso/casper/ && cp /boot/vmlinuz-* iso/casper/vmlinuz && cp /boot/initrd.img-* iso/casper/initrd
-        echo 'set timeout=3\nset default=0\nmenuentry "KSO-HANI V32.0 [KSO]" { linux /casper/vmlinuz boot=casper quiet splash ---\ninitrd /casper/initrd }' > iso/boot/grub/grub.cfg
+        echo 'set timeout=3\nset default=0\nmenuentry "KSO-HANI V33.1 [KSO]" { linux /casper/vmlinuz boot=casper quiet splash ---\ninitrd /casper/initrd }' > iso/boot/grub/grub.cfg
         cp /usr/lib/grub/x86_64-efi/monolithic/grubx64.efi iso/EFI/BOOT/BOOTX64.EFI
         dd if=/dev/zero of=iso/boot/grub/efi.img bs=1M count=10 && mformat -i iso/boot/grub/efi.img :: && mcopy -i iso/boot/grub/efi.img iso/EFI ::/EFI
-        xorriso -as mkisofs -r -V "KSO_V32" -o KSO-HANI-V32.0.iso -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin -c boot.catalog -b boot/grub/efi.img -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot -isohybrid-gpt-basdat -graft-points /boot/grub/grub.cfg=iso/boot/grub/grub.cfg /EFI=iso/EFI /casper=iso/casper /boot/grub/efi.img=iso/boot/grub/efi.img
+        xorriso -as mkisofs -r -V "KSO_V33" -o KSO-HANI-V33.1.iso -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin -c boot.catalog -b boot/grub/efi.img -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot -isohybrid-gpt-basdat -graft-points /boot/grub/grub.cfg=iso/boot/grub/grub.cfg /EFI=iso/EFI /casper=iso/casper /boot/grub/efi.img=iso/boot/grub/efi.img
 
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: KSO-HANI-V32.0-[KSO]
-        path: KSO-HANI-V32.0.iso
+        name: KSO-HANI-V33.1-[KSO]
+        path: KSO-HANI-V33.1.iso
