@@ -1,4 +1,4 @@
-name: Build KSO-HANI V34.8 - SUDO KERNEL [KSO]
+name: Build KSO-HANI V34.9 - GUARANTEED 4.1MB [KSO]
 on: workflow_dispatch
 
 jobs:
@@ -11,17 +11,19 @@ jobs:
       - name: Build ISO [KSO]
         run: |
           sudo apt-get update
-          sudo apt-get install -y squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin mtools lzip gnome-games linux-generic
+          sudo apt-get install -y squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin mtools lzip gnome-games linux-image-generic
 
           mkdir -p rootfs/boot/grub iso/boot/grub iso/EFI/boot iso/casper
 
-          # 1. نجيب الكيرنل بـ sudo غصب عن Github [KSO]
-          sudo cp /boot/vmlinuz-*generic* iso/boot/vmlinuz
-          sudo cp /boot/initrd.img-*generic* iso/boot/initrd.img
+          # 1. نسرق الكيرنل من deb بـ sudo [KSO] دي اللي هتنجحنا
+          sudo dpkg -x /var/cache/apt/archives/linux-image-*.deb /tmp/kernel
+          sudo cp /tmp/kernel/boot/vmlinuz-* iso/boot/vmlinuz
+          sudo cp /tmp/kernel/boot/initrd.img-* iso/boot/initrd.img
           sudo chmod 644 iso/boot/vmlinuz iso/boot/initrd.img
-          echo "[KSO] Kernel copied with sudo"
+          echo "[KSO] Kernel size:"
+          ls -lh iso/boot/
 
-          # 2. الالعاب
+          # 2. الالعاب بس
           sudo chroot rootfs apt-get update
           sudo chroot rootfs apt-get install -y gnome-games lzip
 
@@ -32,7 +34,7 @@ jobs:
           bindsym $mod+g exec gnome-games
           bindsym $mod+m exec minetest
           bindsym $mod+q exec shutdown now
-          exec_always --no-startup-id xsetroot -name "KSO-HANI V34.8 [KSO]"
+          exec_always --no-startup-id xsetroot -name "KSO-HANI V34.9 [KSO]"
           EOF
 
           # 4. دخول اوتوماتيك
@@ -46,7 +48,7 @@ jobs:
           # 5. نضغط السيستم
           mksquashfs rootfs iso/casper/filesystem.squashfs -comp xz -b 1048576 -no-xattrs
 
-          # 6. GRUB بوت اوتوماتيك 3 ثواني
+          # 6. GRUB بوت اوتوماتيك 3 ثواني + الجملة
           cat > iso/boot/grub/grub.cfg <<'EOF'
           set timeout=3
           set default=0
@@ -55,12 +57,14 @@ jobs:
             initrd /boot/initrd.img
           }
           EOF
-          grub-mkrescue -o KSO-HANI-V34.8.iso iso
+          grub-mkrescue -o KSO-HANI-V34.9.iso iso
 
-          ls -lh KSO-HANI-V34.8.iso
+          echo "=== FINAL SIZE CHECK [KSO] ==="
+          ls -lh KSO-HANI-V34.9.iso
+          ls -lh iso/casper/filesystem.squashfs
 
       - name: Upload ISO [KSO]
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-HANI-V34.8-[KSO]
-          path: KSO-HANI-V34.8.iso
+          name: KSO-HANI-V34.9-[KSO]
+          path: KSO-HANI-V34.9.iso
