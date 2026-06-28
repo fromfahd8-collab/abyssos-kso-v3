@@ -1,4 +1,4 @@
-name: Build KSO-HANI V34.9 - GUARANTEED 4.1MB [KSO]
+name: Build KSO-HANI V34.10 - BOOT MENU [KSO]
 on: workflow_dispatch
 
 jobs:
@@ -15,26 +15,22 @@ jobs:
 
           mkdir -p rootfs/boot/grub iso/boot/grub iso/EFI/boot iso/casper
 
-          # 1. نسرق الكيرنل من deb بـ sudo [KSO] دي اللي هتنجحنا
+          # 1. الكيرنل بـ sudo
           sudo dpkg -x /var/cache/apt/archives/linux-image-*.deb /tmp/kernel
           sudo cp /tmp/kernel/boot/vmlinuz-* iso/boot/vmlinuz
           sudo cp /tmp/kernel/boot/initrd.img-* iso/boot/initrd.img
-          sudo chmod 644 iso/boot/vmlinuz iso/boot/initrd.img
-          echo "[KSO] Kernel size:"
-          ls -lh iso/boot/
 
-          # 2. الالعاب بس
+          # 2. الالعاب
           sudo chroot rootfs apt-get update
           sudo chroot rootfs apt-get install -y gnome-games lzip
 
-          # 3. اختصارات i3
+          # 3. i3
           mkdir -p rootfs/etc/skel/.config/i3
           cat > rootfs/etc/skel/.config/i3/config <<'EOF'
           set $mod Mod4
           bindsym $mod+g exec gnome-games
           bindsym $mod+m exec minetest
           bindsym $mod+q exec shutdown now
-          exec_always --no-startup-id xsetroot -name "KSO-HANI V34.9 [KSO]"
           EOF
 
           # 4. دخول اوتوماتيك
@@ -45,26 +41,30 @@ jobs:
           ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM
           EOF
 
-          # 5. نضغط السيستم
+          # 5. ضغط
           mksquashfs rootfs iso/casper/filesystem.squashfs -comp xz -b 1048576 -no-xattrs
 
-          # 6. GRUB بوت اوتوماتيك 3 ثواني + الجملة
+          # 6. GRUB فيه الجملة في البوت نفسه [KSO]
           cat > iso/boot/grub/grub.cfg <<'EOF'
-          set timeout=3
+          set timeout=5
           set default=0
-          menuentry "برمجة عبد الله و عبد الرحمن هاني [KSO]" {
+
+          set menu_color_normal=white/black
+          set menu_color_highlight=black/white
+
+          echo "برمجة عبد الله و عبد الرحمن هاني [KSO]"
+
+          menuentry "KSO-HANI V34.10 Live System [KSO]" {
             linux /boot/vmlinuz boot=casper quiet splash
             initrd /boot/initrd.img
           }
           EOF
-          grub-mkrescue -o KSO-HANI-V34.9.iso iso
+          grub-mkrescue -o KSO-HANI-V34.10.iso iso
 
-          echo "=== FINAL SIZE CHECK [KSO] ==="
-          ls -lh KSO-HANI-V34.9.iso
-          ls -lh iso/casper/filesystem.squashfs
+          ls -lh KSO-HANI-V34.10.iso
 
       - name: Upload ISO [KSO]
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-HANI-V34.9-[KSO]
-          path: KSO-HANI-V34.9.iso
+          name: KSO-HANI-V34.10-[KSO]
+          path: KSO-HANI-V34.10.iso
