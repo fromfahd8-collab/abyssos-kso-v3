@@ -1,4 +1,4 @@
-name: Build KSO-HANI V31.3 - FIXED MKDIR [KSO]
+name: Build KSO-HANI V31.4 - FIXED LN [KSO]
 
 on:
   workflow_dispatch:
@@ -14,10 +14,9 @@ jobs:
     - name: Install Tools
       run: sudo apt-get update -qq && sudo apt-get install -y grub-efi-amd64-bin mtools squashfs-tools xorriso i3 feh rofi fonts-dejavu-core minetest retroarch libretro-snes9x libretro-gambatte linux-generic casper initramfs-tools unzip wget -qq
 
-    - name: Build ISO 410MB V31.3 FIX
+    - name: Build ISO 410MB V31.4 FIX
       run: |
         set -ex
-        # V31.3 FIX: نعمل المجلدات واحد عشان GitHub ميزعلش
         mkdir -p rootfs
         mkdir -p rootfs/usr/share/games/kso/snes
         mkdir -p rootfs/usr/share/games/kso/gba 
@@ -25,6 +24,8 @@ jobs:
         mkdir -p rootfs/usr/share/plymouth/themes/kso
         mkdir -p rootfs/etc/skel/.config/i3 
         mkdir -p rootfs/usr/bin
+        # V31.4 FIX: ده السطر اللي كان ناقص
+        mkdir -p rootfs/etc/alternatives 
         
         echo '[Plymouth Theme]\nName=KSO-HANI\nDescription=برمجة عبد الله و عبد الرحمن هاني [ kso ]\nModuleName=script' > rootfs/usr/share/plymouth/themes/kso/kso.plymouth
         ln -sf /usr/share/plymouth/themes/kso/kso.plymouth rootfs/etc/alternatives/default.plymouth
@@ -52,13 +53,13 @@ jobs:
         
         mkdir iso && mkdir iso/boot/grub iso/casper iso/EFI/BOOT
         cp filesystem.squashfs iso/casper/ && cp /boot/vmlinuz-* iso/casper/vmlinuz && cp /boot/initrd.img-* iso/casper/initrd
-        echo 'set timeout=3\nset default=0\nmenuentry "KSO-HANI V31.3 [KSO]" { linux /casper/vmlinuz boot=casper quiet splash ---\ninitrd /casper/initrd }' > iso/boot/grub/grub.cfg
+        echo 'set timeout=3\nset default=0\nmenuentry "KSO-HANI V31.4 [KSO]" { linux /casper/vmlinuz boot=casper quiet splash ---\ninitrd /casper/initrd }' > iso/boot/grub/grub.cfg
         cp /usr/lib/grub/x86_64-efi/monolithic/grubx64.efi iso/EFI/BOOT/BOOTX64.EFI
         dd if=/dev/zero of=iso/boot/grub/efi.img bs=1M count=10 && mformat -i iso/boot/grub/efi.img :: && mcopy -i iso/boot/grub/efi.img iso/EFI ::/EFI
-        xorriso -as mkisofs -r -V "KSO_V31" -o KSO-HANI-V31.3.iso -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin -c boot.catalog -b boot/grub/efi.img -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot -isohybrid-gpt-basdat -graft-points /boot/grub/grub.cfg=iso/boot/grub/grub.cfg /EFI=iso/EFI /casper=iso/casper /boot/grub/efi.img=iso/boot/grub/efi.img
+        xorriso -as mkisofs -r -V "KSO_V31" -o KSO-HANI-V31.4.iso -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin -c boot.catalog -b boot/grub/efi.img -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot -isohybrid-gpt-basdat -graft-points /boot/grub/grub.cfg=iso/boot/grub/grub.cfg /EFI=iso/EFI /casper=iso/casper /boot/grub/efi.img=iso/boot/grub/efi.img
 
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: KSO-HANI-V31.3-[KSO]
-        path: KSO-HANI-V31.3.iso
+        name: KSO-HANI-V31.4-[KSO]
+        path: KSO-HANI-V31.4.iso
