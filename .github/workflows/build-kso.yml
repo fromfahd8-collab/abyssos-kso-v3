@@ -1,4 +1,4 @@
-name: Build KSO-HANI V25.1 - BOOT 100% [KSO]
+name: Build KSO-HANI V25.2 - BOOT 100% [KSO]
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ jobs:
     - name: Free Disk Space
       run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/share/swift /usr/local/.ghcup && sudo apt-get clean
 
-    - name: Install Tools V25.1
+    - name: Install Tools V25.2
       run: |
         sudo add-apt-repository ppa:libretro/stable -y
         sudo apt-get update -qq
@@ -20,7 +20,7 @@ jobs:
     - name: Build RootFS + Download 11 Games
       run: |
         set -e
-        rm -rf rootfs /tmp/kso_games
+        rm -rf rootfs /tmp/kso_games filesystem.squashfs
         mkdir -p rootfs
         cd rootfs
         
@@ -38,7 +38,7 @@ jobs:
         # 2. اسمك اول ما تفتح التيرمنال
         echo "====================================" > etc/motd
         echo "برمجة عبد الله و عبد الرحمن هاني [ KSO ]" >> etc/motd
-        echo "KSO-HANI V25.1 LIVE - Retropie Edition" >> etc/motd
+        echo "KSO-HANI V25.2 LIVE - Retropie Edition" >> etc/motd
         echo "====================================" >> etc/motd
 
         echo 'exec i3' > etc/skel/.xinitrc
@@ -82,19 +82,23 @@ jobs:
         echo "SUCCESS: $COUNT / 11"
         if [ "$COUNT" -lt "11" ]; then exit 1; fi
         
-        # V25.1 FIX: شلنا cd ورجعنا المسار كامل
-        mkdir -p $GITHUB_WORKSPACE/rootfs/usr/share/games/kso
-        cp -r /tmp/kso_games/* $GITHUB_WORKSPACE/rootfs/usr/share/games/kso/
+        # V25.2 FIX: نرجع للمسار الصح ونعمل squashfs
         cd $GITHUB_WORKSPACE
+        mkdir -p rootfs/usr/share/games/kso
+        cp -r /tmp/kso_games/* rootfs/usr/share/games/kso/
+        ls -lh rootfs/usr/share/games/kso/  # تأكيد
         mksquashfs rootfs filesystem.squashfs -comp xz -b 1048576
+        ls -lh filesystem.squashfs  # تأكيد
 
-    - name: Create ISO - V25.1 FIX CASPER [KSO]
+    - name: Create ISO - V25.2 FIX CASPER [KSO]
       run: |
         cd $GITHUB_WORKSPACE
         rm -rf iso
-        mkdir -p iso/boot/grub iso/casper
+        mkdir -p iso/boot/grub iso/casper iso/EFI/BOOT
         
-        # الحل: حط كل حاجة جوه /casper زي Ubuntu الحقي
+        # V25.2 FIX: تأكد ان الملف موجود قبل النسخ
+        test -f filesystem.squashfs || { echo "ERROR: filesystem.squashfs missing"; exit 1; }
+        
         cp filesystem.squashfs iso/casper/filesystem.squashfs
         cp /boot/vmlinuz-* iso/casper/vmlinuz
         cp /boot/initrd.img-* iso/casper/initrd
@@ -103,7 +107,7 @@ jobs:
         cat > iso/boot/grub/grub.cfg << 'EOF'
         set timeout=3
         set default=0
-        menuentry "KSO-HANI V25.1 LIVE [KSO]" {
+        menuentry "KSO-HANI V25.2 LIVE [KSO]" {
           linux /casper/vmlinuz boot=casper quiet splash ---
           initrd /casper/initrd
         }
@@ -114,7 +118,7 @@ jobs:
         mformat -i iso/boot/grub/efi.img ::
         mcopy -i iso/boot/grub/efi.img iso/EFI ::/EFI
         
-        xorriso -as mkisofs -r -V "KSO_V25" -o KSO-HANI-LIVE-V25.1.iso \
+        xorriso -as mkisofs -r -V "KSO_V25" -o KSO-HANI-LIVE-V25.2.iso \
         -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
         -c boot.catalog -b boot/grub/efi.img -no-emul-boot -boot-load-size 4 -boot-info-table \
         -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot \
@@ -127,5 +131,5 @@ jobs:
     - name: Upload ISO
       uses: actions/upload-artifact@v4
       with:
-        name: KSO-HANI-LIVE-V25.1-[KSO]
-        path: KSO-HANI-LIVE-V25.1.iso
+        name: KSO-HANI-LIVE-V25.2-[KSO]
+        path: KSO-HANI-LIVE-V25.2.iso
