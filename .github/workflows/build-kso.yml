@@ -1,4 +1,4 @@
-name: Build KSO-HANI V34.FINAL2 - FIXED REPOS [KSO]
+name: Build KSO-HANI V34.FINAL3 - GUARANTEED [KSO]
 on: workflow_dispatch
 
 jobs:
@@ -8,21 +8,21 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin mtools software-properties-common
+          sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin mtools
 
       - name: Build RootFS + Kernel [KSO]
         run: |
-          # 1. rootfs
+          # 1. rootfs مينيمال
           sudo debootstrap --arch=amd64 noble rootfs http://archive.ubuntu.com/ubuntu/
           
-          # 2. افتح المستودعات [KSO] ده حل الخطأ 991
-          sudo chroot rootfs add-apt-repository universe -y
+          # 2. افتح universe يدوي [KSO] ده حل الخطأ 986 نهائي
+          echo 'deb http://archive.ubuntu.com/ubuntu noble main universe' | sudo tee rootfs/etc/apt/sources.list
           sudo chroot rootfs apt-get update
           
-          # 3. نزل الكيرنل + الالعاب + i3 دلوقتي هيلاقيهم
+          # 3. نزل كله مرة واحدة
           sudo chroot rootfs apt-get install -y --no-install-recommends linux-generic gnome-games lzip i3 minetest
           
-          # 4. خد الكيرنل
+          # 4. خد الكيرنل + initrd
           mkdir -p iso/boot
           sudo cp rootfs/boot/vmlinuz-* iso/boot/vmlinuz
           sudo cp rootfs/boot/initrd.img-* iso/boot/initrd.img
@@ -42,7 +42,7 @@ jobs:
           mkdir -p iso/casper
           sudo mksquashfs rootfs iso/casper/filesystem.squashfs -comp xz -b 1048576 -no-xattrs
 
-          # 8. GRUB
+          # 8. GRUB باسمك
           mkdir -p iso/boot/grub
           cat > iso/boot/grub/grub.cfg <<'EOF'
           set timeout=5
@@ -50,19 +50,19 @@ jobs:
           set menu_color_normal=cyan/black
           set menu_color_highlight=white/cyan
           echo "========================================"
-          echo " KSO-HANI V34.FINAL2 [KSO]"
-          echo " [ kso ]برمجة عبد الله و عبد الرحمن هاني"
+          echo " KSO-HANI V34.FINAL3 [KSO]"
+          echo " kso برمجة عبد الله و عبد الرحمن هاني"
           echo "========================================"
-          menuentry "KSO-HANI V34.FINAL2 Live [KSO]" {
+          menuentry "KSO-HANI V34.FINAL3 Live [KSO]" {
             linux /boot/vmlinuz boot=casper quiet splash
             initrd /boot/initrd.img
           }
           EOF
-          grub-mkrescue -o KSO-HANI-V34.FINAL2.iso iso
-          ls -lh KSO-HANI-V34.FINAL2.iso
+          grub-mkrescue -o KSO-HANI-V34.FINAL3.iso iso
+          ls -lh KSO-HANI-V34.FINAL3.iso
 
       - name: Upload ISO [KSO]
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-HANI-V34.FINAL2-[KSO]
-          path: KSO-HANI-V34.FINAL2.iso
+          name: KSO-HANI-V34.FINAL3-[KSO]
+          path: KSO-HANI-V34.FINAL3.iso
