@@ -1,4 +1,4 @@
-name: Build KSO-HANI V34.FINAL5 - 100% [KSO]
+name: Build KSO-HANI V34.FINAL7 - [KSO]
 on: workflow_dispatch
 
 jobs:
@@ -12,57 +12,60 @@ jobs:
 
       - name: Build RootFS + Kernel [KSO]
         run: |
-          # 1. rootfs + universe
           sudo debootstrap --arch=amd64 noble rootfs http://archive.ubuntu.com/ubuntu/
           echo 'deb http://archive.ubuntu.com/ubuntu noble main universe' | sudo tee rootfs/etc/apt/sources.list
           sudo chroot rootfs apt-get update
           
-          # 2. نزل الكل
+          # 1. الالعاب الحقيقية يا كسو [ KSO ]
           sudo chroot rootfs apt-get install -y --no-install-recommends linux-generic gnome-games lzip i3 minetest initramfs-tools
           
-          # 3. خد الكيرنل + initrd
-          mkdir -p iso/boot
+          # 2. الكيرنل بصلاحيات صح
+          sudo mkdir -p iso/boot
           sudo cp rootfs/boot/vmlinuz-* iso/boot/vmlinuz
+          sudo chmod 644 iso/boot/vmlinuz 
           KERNEL_VER=$(ls rootfs/boot/vmlinuz-* | sed 's/.*vmlinuz-//')
           sudo chroot rootfs update-initramfs -c -k $KERNEL_VER
           sudo cp rootfs/boot/initrd.img-$KERNEL_VER iso/boot/initrd.img
+          sudo chmod 644 iso/boot/initrd.img
           ls -lh iso/boot/
 
-          # 4. i3 + اختصارات [KSO] حل خطأ Permission
+          # 3. i3 + اختصارات الالعاب [KSO]
           sudo mkdir -p rootfs/etc/skel/.config/i3
-          echo 'bindsym $mod+g exec gnome-games' | sudo tee rootfs/etc/skel/.config/i3/config
-          echo 'bindsym $mod+m exec minetest' | sudo tee -a rootfs/etc/skel/.config/i3/config
-          echo 'bindsym $mod+q exec shutdown now' | sudo tee -a rootfs/etc/skel/.config/i3/config
+          echo '# KSO-HANI V34.FINAL7' | sudo tee rootfs/etc/skel/.config/i3/config
+          echo 'bindsym $mod+g exec gnome-games' | sudo tee -a rootfs/etc/skel/.config/i3/config # Win+G = الالغام + شطرنج + 2048
+          echo 'bindsym $mod+m exec minetest' | sudo tee -a rootfs/etc/skel/.config/i3/config # Win+M = ماين كرافت
+          echo 'bindsym $mod+q exec shutdown now' | sudo tee -a rootfs/etc/skel/.config/i3/config # Win+Q = قفل
 
-          # 5. اوتو لوجن
+          # 4. اوتو لوجن باسم KSO
           sudo mkdir -p rootfs/etc/systemd/system/getty@tty1.service.d
           echo -e '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin root --noclear %I $TERM' | sudo tee rootfs/etc/systemd/system/getty@tty1.service.d/override.conf
 
-          # 6. ضغط
+          # 5. ضغط
           mkdir -p iso/casper
           sudo mksquashfs rootfs iso/casper/filesystem.squashfs -comp xz -b 1048576 -no-xattrs
 
-          # 7. GRUB
-          mkdir -p iso/boot/grub
+          # 6. GRUB باسم KSO-HANI
+          sudo mkdir -p iso/boot/grub
           cat > iso/boot/grub/grub.cfg <<'EOF'
           set timeout=5
           set default=0
-          set menu_color_normal=cyan/black
-          set menu_color_highlight=white/cyan
+          set menu_color_normal=green/black
+          set menu_color_highlight=white/green
           echo "========================================"
-          echo " KSO-HANI V34.FINAL5 [KSO]"
-          echo " kso برمجة عبد الله و عبد الرحمن هاني"
+          echo " KSO-HANI V34.FINAL7 [KSO]"
+          echo " [KSO] برمجة عبد الله و عبد الرحمن هاني"
+          echo " Win+G = Games | Win+M = Minetest"
           echo "========================================"
-          menuentry "KSO-HANI V34.FINAL5 Live [KSO]" {
+          menuentry "KSO-HANI V34.FINAL7 Live [KSO]" {
             linux /boot/vmlinuz boot=casper quiet splash
             initrd /boot/initrd.img
           }
           EOF
-          grub-mkrescue -o KSO-HANI-V34.FINAL5.iso iso
-          ls -lh KSO-HANI-V34.FINAL5.iso
+          sudo grub-mkrescue -o KSO-HANI-V34.FINAL7.iso iso
+          ls -lh KSO-HANI-V34.FINAL7.iso
 
       - name: Upload ISO [KSO]
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-HANI-V34.FINAL5-[KSO]
-          path: KSO-HANI-V34.FINAL5.iso
+          name: KSO-HANI-V34.FINAL7-[KSO]
+          path: KSO-HANI-V34.FINAL7.iso
