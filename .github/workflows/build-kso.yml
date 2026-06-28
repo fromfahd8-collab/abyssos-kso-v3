@@ -1,4 +1,4 @@
-name: Build KSO-HANI V34.FINAL - GUARANTEED [KSO]
+name: Build KSO-HANI V34.FINAL2 - FIXED REPOS [KSO]
 on: workflow_dispatch
 
 jobs:
@@ -8,39 +8,41 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin mtools
+          sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin mtools software-properties-common
 
       - name: Build RootFS + Kernel [KSO]
         run: |
-          # 1. نبني rootfs من الصفر ب debootstrap - مضمون
+          # 1. rootfs
           sudo debootstrap --arch=amd64 noble rootfs http://archive.ubuntu.com/ubuntu/
           
-          # 2. ننزل الالعاب جوه rootfs
+          # 2. افتح المستودعات [KSO] ده حل الخطأ 991
+          sudo chroot rootfs add-apt-repository universe -y
           sudo chroot rootfs apt-get update
-          sudo chroot rootfs apt-get install -y --no-install-recommends linux-generic gnome-games lzip i3
           
-          # 3. ناخد الكيرنل + initrd من جوه rootfs نفسه - هنا مضمون 100%
+          # 3. نزل الكيرنل + الالعاب + i3 دلوقتي هيلاقيهم
+          sudo chroot rootfs apt-get install -y --no-install-recommends linux-generic gnome-games lzip i3 minetest
+          
+          # 4. خد الكيرنل
           mkdir -p iso/boot
           sudo cp rootfs/boot/vmlinuz-* iso/boot/vmlinuz
           sudo cp rootfs/boot/initrd.img-* iso/boot/initrd.img
-          echo "[KSO] Kernel Found:"
           ls -lh iso/boot/
 
-          # 4. i3
+          # 5. i3
           mkdir -p rootfs/etc/skel/.config/i3
           echo 'bindsym $mod+g exec gnome-games' | sudo tee rootfs/etc/skel/.config/i3/config
           echo 'bindsym $mod+m exec minetest' | sudo tee -a rootfs/etc/skel/.config/i3/config
           echo 'bindsym $mod+q exec shutdown now' | sudo tee -a rootfs/etc/skel/.config/i3/config
 
-          # 5. اوتو لوجن root
+          # 6. اوتو لوجن
           mkdir -p rootfs/etc/systemd/system/getty@tty1.service.d
           echo -e '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin root --noclear %I $TERM' | sudo tee rootfs/etc/systemd/system/getty@tty1.service.d/override.conf
 
-          # 6. ضغط
+          # 7. ضغط
           mkdir -p iso/casper
           sudo mksquashfs rootfs iso/casper/filesystem.squashfs -comp xz -b 1048576 -no-xattrs
 
-          # 7. GRUB باسمك للتمظره
+          # 8. GRUB
           mkdir -p iso/boot/grub
           cat > iso/boot/grub/grub.cfg <<'EOF'
           set timeout=5
@@ -48,20 +50,19 @@ jobs:
           set menu_color_normal=cyan/black
           set menu_color_highlight=white/cyan
           echo "========================================"
-          echo " KSO-HANI V34.FINAL [KSO]"
-          echo "  [ kso ]برمجة عبد الله و عبد الرحمن هاني"
+          echo " KSO-HANI V34.FINAL2 [KSO]"
+          echo " [ kso ]برمجة عبد الله و عبد الرحمن هاني"
           echo "========================================"
-          menuentry "KSO-HANI V34.FINAL Live [KSO]" {
+          menuentry "KSO-HANI V34.FINAL2 Live [KSO]" {
             linux /boot/vmlinuz boot=casper quiet splash
             initrd /boot/initrd.img
           }
           EOF
-          grub-mkrescue -o KSO-HANI-V34.FINAL.iso iso
-
-          ls -lh KSO-HANI-V34.FINAL.iso
+          grub-mkrescue -o KSO-HANI-V34.FINAL2.iso iso
+          ls -lh KSO-HANI-V34.FINAL2.iso
 
       - name: Upload ISO [KSO]
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-HANI-V34.FINAL-[KSO]
-          path: KSO-HANI-V34.FINAL.iso
+          name: KSO-HANI-V34.FINAL2-[KSO]
+          path: KSO-HANI-V34.FINAL2.iso
