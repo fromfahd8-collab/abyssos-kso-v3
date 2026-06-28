@@ -1,4 +1,4 @@
-name: Build KSO-HANI V34.FINAL10 - [KSO]
+name: Build KSO-HANI V34.FINAL11 - [KSO]
 on: workflow_dispatch
 
 jobs:
@@ -27,7 +27,7 @@ jobs:
           sudo chmod 644 iso/boot/initrd.img
 
           sudo mkdir -p rootfs/etc/skel/.config/i3
-          echo '# KSO-HANI V34.FINAL10' | sudo tee rootfs/etc/skel/.config/i3/config
+          echo '# KSO-HANI V34.FINAL11' | sudo tee rootfs/etc/skel/.config/i3/config
           echo 'bindsym $mod+g exec gnome-games' | sudo tee -a rootfs/etc/skel/.config/i3/config
           echo 'bindsym $mod+m exec minetest' | sudo tee -a rootfs/etc/skel/.config/i3/config
           echo 'bindsym $mod+q exec shutdown now' | sudo tee -a rootfs/etc/skel/.config/i3/config
@@ -38,27 +38,15 @@ jobs:
           sudo mkdir -p iso/casper
           sudo mksquashfs rootfs iso/casper/filesystem.squashfs -comp xz -b 1048576 -no-xattrs
 
-          # <--- الحل: كله في echo واحد عشان YAML ميبوظش
+          # <--- الحل النهائي: كله في سطر echo واحد
           sudo mkdir -p iso/boot/grub
-          echo 'set timeout=5
-set default=0
-set menu_color_normal=green/black
-set menu_color_highlight=white/green
-echo "========================================"
-echo " KSO-HANI V34.FINAL10 [KSO]"
-echo " برمجة عبد الله و عبد الرحمن هاني [KSO]"
-echo " Win+G = Games | Win+M = Minetest"
-echo "========================================"
-menuentry "KSO-HANI V34.FINAL10 Live [KSO]" {
-  linux /boot/vmlinuz boot=casper quiet splash
-  initrd /boot/initrd.img
-}' | sudo tee iso/boot/grub/grub.cfg > /dev/null
+          echo -e 'set timeout=5\nset default=0\nset menu_color_normal=green/black\nset menu_color_highlight=white/green\necho "========================================"\necho " KSO-HANI V34.FINAL11 [KSO]"\necho " برمجة عبد الله و عبد الرحمن هاني [KSO]"\necho " Win+G = Games | Win+M = Minetest"\necho "========================================"\nmenuentry "KSO-HANI V34.FINAL11 Live [KSO]" {\n linux /boot/vmlinuz boot=casper quiet splash\n initrd /boot/initrd.img\n}' | sudo tee iso/boot/grub/grub.cfg > /dev/null
 
-          sudo grub-mkrescue -o KSO-HANI-V34.FINAL10.iso iso
-          ls -lh KSO-HANI-V34.FINAL10.iso
+          sudo grub-mkrescue -o KSO-HANI-V34.FINAL11.iso iso
+          ls -lh KSO-HANI-V34.FINAL11.iso
 
       - name: Upload ISO [KSO]
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-HANI-V34.FINAL10-[KSO]
-          path: KSO-HANI-V34.FINAL10.iso
+          name: KSO-HANI-V34.FINAL11-[KSO]
+          path: KSO-HANI-V34.FINAL11.iso
