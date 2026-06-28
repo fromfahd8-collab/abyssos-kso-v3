@@ -1,4 +1,4 @@
-name: Build KSO-HANI V33.5 - FIX MBR [KSO]
+name: Build KSO-HANI V33.6 - UEFI ONLY [KSO]
 
 on:
   workflow_dispatch:
@@ -12,9 +12,9 @@ jobs:
       run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/share/swift /usr/local/.ghcup
 
     - name: Install Tools
-      run: sudo apt-get update -qq && sudo apt-get install -y syslinux syslinux-utils grub-efi-amd64-bin mtools squashfs-tools xorriso i3 feh rofi fonts-dejavu-core minetest retroarch libretro-snes9x libretro-gambatte linux-generic casper initramfs-tools -qq
+      run: sudo apt-get update -qq && sudo apt-get install -y grub-efi-amd64-bin mtools squashfs-tools xorriso i3 feh rofi fonts-dejavu-core minetest retroarch libretro-snes9x libretro-gambatte linux-generic casper initramfs-tools -qq
 
-    - name: Build ISO 410MB V33.5
+    - name: Build ISO 410MB V33.6
       run: |
         set -ex
         mkdir -p rootfs/usr/share/games/kso/snes rootfs/usr/share/games/kso/gba rootfs/usr/share/libretro/content/snes rootfs/usr/share/libretro/content/gba rootfs/usr/share/minetest/games rootfs/usr/share/plymouth/themes/kso rootfs/etc/skel/.config/i3 rootfs/usr/bin rootfs/etc/alternatives 
@@ -48,15 +48,15 @@ jobs:
         mksquashfs rootfs filesystem.squashfs -comp xz -b 1048576
         mkdir -p iso/boot/grub iso/casper iso/EFI/BOOT
         cp filesystem.squashfs iso/casper/ && cp /boot/vmlinuz-* iso/casper/vmlinuz && cp /boot/initrd.img-* iso/casper/initrd
-        echo 'set timeout=3\nset default=0\nmenuentry "KSO-HANI V33.5 [KSO]" { linux /casper/vmlinuz boot=casper quiet splash ---\ninitrd /casper/initrd }' > iso/boot/grub/grub.cfg
+        echo 'set timeout=3\nset default=0\nmenuentry "KSO-HANI V33.6 [KSO]" { linux /casper/vmlinuz boot=casper quiet splash ---\ninitrd /casper/initrd }' > iso/boot/grub/grub.cfg
         cp /usr/lib/grub/x86_64-efi/monolithic/grubx64.efi iso/EFI/BOOT/BOOTX64.EFI
         echo 'search --set=root --file /boot/grub/grub.cfg\nsource /boot/grub/grub.cfg' > iso/EFI/BOOT/grub.cfg
         
-        # V33.5 FIX: المسار الصح بتاع MBR
-        xorriso -as mkisofs -r -V "KSO_V33" -o KSO-HANI-V33.5.iso -isohybrid-mbr /usr/lib/syslinux/mbr/isohdpfx.bin -c boot.catalog -b boot/grub/grub.cfg -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot -isohybrid-gpt-basdat iso
+        # V33.6 FIX: شلت -isohybrid-mbr خالص. UEFI صِرف
+        xorriso -as mkisofs -r -V "KSO_V33" -o KSO-HANI-V33.6.iso -c boot.catalog -b boot/grub/grub.cfg -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot -isohybrid-gpt-basdat iso
 
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: KSO-HANI-V33.5-[KSO]
-        path: KSO-HANI-V33.5.iso
+        name: KSO-HANI-V33.6-[KSO]
+        path: KSO-HANI-V33.6.iso
