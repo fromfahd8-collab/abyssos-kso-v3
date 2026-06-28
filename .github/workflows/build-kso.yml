@@ -1,4 +1,4 @@
-name: Build KSO-HANI V28.1 - FIX ROOTFS [KSO]
+name: Build KSO-HANI V28.3 - ALL 11 GAMES [KSO]
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ jobs:
     - name: Free Disk Space
       run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/share/swift /usr/local/.ghcup && sudo apt-get clean
 
-    - name: Install Tools V28.1
+    - name: Install Tools V28.3
       run: |
         sudo add-apt-repository ppa:libretro/stable -y
         sudo apt-get update -qq
@@ -19,10 +19,11 @@ jobs:
 
     - name: Build RootFS + Download 11 Games
       run: |
-        set -ex # V28.1 FIX: -x عشان نشوف كل امر
+        set -ex
         rm -rf $GITHUB_WORKSPACE/rootfs $GITHUB_WORKSPACE/games_tmp filesystem.squashfs
         mkdir -p $GITHUB_WORKSPACE/rootfs/usr/share/plymouth/themes/kso $GITHUB_WORKSPACE/rootfs/etc/alternatives $GITHUB_WORKSPACE/rootfs/usr/bin $GITHUB_WORKSPACE/rootfs/etc/skel/.config/i3 $GITHUB_WORKSPACE/rootfs/etc/skel/.minetest
         
+        # اسمك في البوت
         cat > $GITHUB_WORKSPACE/rootfs/usr/share/plymouth/themes/kso/kso.plymouth << 'EOF'
         [Plymouth Theme]
         Name=KSO-HANI
@@ -33,7 +34,7 @@ jobs:
 
         echo "====================================" > $GITHUB_WORKSPACE/rootfs/etc/motd
         echo "برمجة عبد الله و عبد الرحمن هاني [ KSO ]" >> $GITHUB_WORKSPACE/rootfs/etc/motd
-        echo "KSO-HANI V28.1 LIVE - Retropie Edition" >> $GITHUB_WORKSPACE/rootfs/etc/motd
+        echo "KSO-HANI V28.3 LIVE - Retropie Edition" >> $GITHUB_WORKSPACE/rootfs/etc/motd
         echo "====================================" >> $GITHUB_WORKSPACE/rootfs/etc/motd
 
         echo 'exec i3' > $GITHUB_WORKSPACE/rootfs/etc/skel/.xinitrc
@@ -49,10 +50,16 @@ jobs:
         bindsym $mod+d exec rofi -show drun
         EOF
 
-        set +e 
+        cat > $GITHUB_WORKSPACE/rootfs/etc/skel/.minetest/minetest.conf << 'EOF'
+        video_driver = opengl
+        fps_max = 60
+        EOF
+
+        # V28.3 FIX: نزل كل الالعاب 11 لعبة
         mkdir -p $GITHUB_WORKSPACE/games_tmp/snes $GITHUB_WORKSPACE/games_tmp/gba
         cd $GITHUB_WORKSPACE/games_tmp
         download() { echo "TRYING: $2"; curl -L -m 30 -s -o $2 $1 && [ -s $2 ] && echo "OK: $2" || echo "FAIL: $2"; }
+        
         download "https://github.com/snes-homebrew/roms/raw/main/Tetris.sfc" "snes/Tetris.sfc"
         download "https://github.com/snes-homebrew/roms/raw/main/SMW.sfc" "snes/Mario.sfc"
         download "https://github.com/snes-homebrew/roms/raw/main/SF2.sfc" "snes/SF2.sfc"
@@ -64,23 +71,25 @@ jobs:
         download "https://github.com/gba-homebrew/roms/raw/main/FlappyBird.gba" "gba/Flappy.gba"
         download "https://github.com/gba-homebrew/roms/raw/main/Snake.gba" "gba/Snake.gba"
         download "https://github.com/gba-homebrew/roms/raw/main/Tetris.gba" "gba/Tetris.gba"
-        set -e
         
         COUNT=$(find $GITHUB_WORKSPACE/games_tmp -type f -size +1k | wc -l)
         echo "SUCCESS: $COUNT / 11"
-        if [ "$COUNT" -lt "8" ]; then exit 1; fi
+        if [ "$COUNT" -lt "8" ]; then echo "ERROR: Not enough games"; exit 1; fi
+        
+        ls -R $GITHUB_WORKSPACE/games_tmp # V28.3 DEBUG: اتأكد انهم نزلوا
         
         cd $GITHUB_WORKSPACE 
         mkdir -p rootfs/usr/share/games/kso  
-        cp -rv games_tmp/* rootfs/usr/share/games/kso/  # -v عشان نشوف بينقل ايه
-        rm -rf games_tmp 
+        mv games_tmp/* rootfs/usr/share/games/kso/ # V28.3 FIX: mv بالعافية
         
-        du -sh rootfs  # V28.1 CHECK: لازم يبقى 400M+
-        ls -R rootfs/usr/share/games/kso # اتأكد ان الالعاب جواه
+        echo "=== AFTER MV ==="
+        ls -R rootfs/usr/share/games/kso # اتأكد انهم اتنقلوا
+        
+        du -sh rootfs  # V28.3 CHECK: لازم يبقى 400M+
         mksquashfs rootfs filesystem.squashfs -comp xz -b 1048576
         ls -lh filesystem.squashfs 
 
-    - name: Create ISO - V28.1 NO ERRORS [KSO]
+    - name: Create ISO - V28.3 CHECK SIZE [KSO]
       run: |
         set -x
         cd $GITHUB_WORKSPACE
@@ -96,7 +105,7 @@ jobs:
         mkdir kso_iso/EFI
         mkdir kso_iso/EFI/BOOT
         
-        rm -f kso_iso/casper/vmlinuz kso_iso/casper/initrd # V28.1 FIX: امسح اي ملف قديم
+        rm -f kso_iso/casper/vmlinuz kso_iso/casper/initrd
         cp filesystem.squashfs kso_iso/casper/filesystem.squashfs
         cp /boot/vmlinuz-$(uname -r) kso_iso/casper/vmlinuz
         cp /boot/initrd.img-$(uname -r) kso_iso/casper/initrd
@@ -104,7 +113,7 @@ jobs:
         cat > kso_iso/boot/grub/grub.cfg << 'EOF'
         set timeout=3
         set default=0
-        menuentry "KSO-HANI V28.1 LIVE [KSO]" {
+        menuentry "KSO-HANI V28.3 LIVE [KSO]" {
           linux /casper/vmlinuz boot=casper quiet splash ---
           initrd /casper/initrd
         }
@@ -115,7 +124,7 @@ jobs:
         mformat -i kso_iso/boot/grub/efi.img ::
         mcopy -i kso_iso/boot/grub/efi.img kso_iso/EFI ::/EFI
         
-        xorriso -as mkisofs -r -V "KSO_V28" -o KSO-HANI-LIVE-V28.1.iso \
+        xorriso -as mkisofs -r -V "KSO_V28" -o KSO-HANI-LIVE-V28.3.iso \
         -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
         -c boot.catalog -b boot/grub/efi.img -no-emul-boot -boot-load-size 4 -boot-info-table \
         -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot \
@@ -128,5 +137,5 @@ jobs:
     - name: Upload ISO
       uses: actions/upload-artifact@v4
       with:
-        name: KSO-HANI-LIVE-V28.1-[KSO]
-        path: KSO-HANI-LIVE-V28.1.iso
+        name: KSO-HANI-LIVE-V28.3-[KSO]
+        path: KSO-HANI-LIVE-V28.3.iso
