@@ -1,3 +1,22 @@
+name: Build KSO-HANI V25.3 - BOOT 100% [KSO]
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    steps:
+    - name: Free Disk Space
+      run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/share/swift /usr/local/.ghcup && sudo apt-get clean
+
+    - name: Install Tools V25.3
+      run: |
+        sudo add-apt-repository ppa:libretro/stable -y
+        sudo apt-get update -qq
+        sudo apt-get install -y grub-efi-amd64-bin mtools squashfs-tools git xorriso i3 feh rofi fonts-noto-color-emoji fonts-dejavu-core curl unzip minetest retroarch libretro-snes9x libretro-gambatte linux-generic casper initramfs-tools -qq
+
     - name: Build RootFS + Download 11 Games
       run: |
         set -e
@@ -38,7 +57,6 @@
         fps_max = 60
         EOF
 
-        # V25.3 FIX: نفك set -e عشان لينك بايظ ميوقعش البيلد
         set +e 
         mkdir -p /tmp/kso_games/snes /tmp/kso_games/gba
         cd /tmp/kso_games
@@ -67,3 +85,45 @@
         ls -lh rootfs/usr/share/games/kso/ 
         mksquashfs rootfs filesystem.squashfs -comp xz -b 1048576
         ls -lh filesystem.squashfs 
+
+    - name: Create ISO - V25.3 FIX CASPER [KSO]
+      run: |
+        cd $GITHUB_WORKSPACE
+        rm -rf iso
+        mkdir -p iso/boot/grub iso/casper iso/EFI/BOOT
+        
+        test -f filesystem.squashfs || { echo "ERROR: filesystem.squashfs missing"; exit 1; }
+        
+        cp filesystem.squashfs iso/casper/filesystem.squashfs
+        cp /boot/vmlinuz-* iso/casper/vmlinuz
+        cp /boot/initrd.img-* iso/casper/initrd
+        
+        cat > iso/boot/grub/grub.cfg << 'EOF'
+        set timeout=3
+        set default=0
+        menuentry "KSO-HANI V25.3 LIVE [KSO]" {
+          linux /casper/vmlinuz boot=casper quiet splash ---
+          initrd /casper/initrd
+        }
+        EOF
+        
+        cp /usr/lib/grub/x86_64-efi/monolithic/grubx64.efi iso/EFI/BOOT/BOOTX64.EFI
+        dd if=/dev/zero of=iso/boot/grub/efi.img bs=1M count=10
+        mformat -i iso/boot/grub/efi.img ::
+        mcopy -i iso/boot/grub/efi.img iso/EFI ::/EFI
+        
+        xorriso -as mkisofs -r -V "KSO_V25" -o KSO-HANI-LIVE-V25.3.iso \
+        -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
+        -c boot.catalog -b boot/grub/efi.img -no-emul-boot -boot-load-size 4 -boot-info-table \
+        -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot \
+        -isohybrid-gpt-basdat -graft-points \
+        /boot/grub/grub.cfg=iso/boot/grub/grub.cfg \
+        /EFI=iso/EFI \
+        /casper=iso/casper \
+        /boot/grub/efi.img=iso/boot/grub/efi.img
+
+    - name: Upload ISO
+      uses: actions/upload-artifact@v4
+      with:
+        name: KSO-HANI-LIVE-V25.3-[KSO]
+        path: KSO-HANI-LIVE-V25.3.iso
