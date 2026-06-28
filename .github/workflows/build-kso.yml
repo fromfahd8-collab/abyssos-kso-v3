@@ -1,4 +1,4 @@
-name: Build KSO-HANI V34.11 - FIXED dpkg-deb [KSO]
+name: Build KSO-HANI V34.12 - CLEAN BOOT [KSO]
 on: workflow_dispatch
 
 jobs:
@@ -15,18 +15,19 @@ jobs:
 
           mkdir -p rootfs/boot/grub iso/boot/grub iso/EFI/boot iso/casper
 
-          # 1. الكيرنل بـ dpkg-deb مش dpkg [KSO] ده التعديل
-          sudo dpkg-deb -x /var/cache/apt/archives/linux-image-*.deb /tmp/kernel
+          # 1. الكيرنل - متصلح بدون * [KSO] ده حل الخطأ 1027
+          KERNEL_DEB=$(ls /var/cache/apt/archives/linux-image-*.deb | head -n1)
+          sudo dpkg-deb -x $KERNEL_DEB /tmp/kernel
           sudo cp /tmp/kernel/boot/vmlinuz-* iso/boot/vmlinuz
           sudo cp /tmp/kernel/boot/initrd.img-* iso/boot/initrd.img
-          echo "[KSO] Kernel:"
+          echo "[KSO] Kernel OK:"
           ls -lh iso/boot/
 
-          # 2. الالعاب
+          # 2. الالعاب - زي ما هي متغيرش
           sudo chroot rootfs apt-get update
           sudo chroot rootfs apt-get install -y gnome-games lzip
 
-          # 3. i3
+          # 3. i3 - زي ما هو
           mkdir -p rootfs/etc/skel/.config/i3
           cat > rootfs/etc/skel/.config/i3/config <<'EOF'
           set $mod Mod4
@@ -35,7 +36,7 @@ jobs:
           bindsym $mod+q exec shutdown now
           EOF
 
-          # 4. دخول اوتوماتيك
+          # 4. دخول اوتوماتيك - زي ما هو
           mkdir -p rootfs/etc/systemd/system/getty@tty1.service.d
           cat > rootfs/etc/systemd/system/getty@tty1.service.d/override.conf <<'EOF'
           [Service]
@@ -43,26 +44,33 @@ jobs:
           ExecStart=-/sbin/agetty --autologin root --noclear %I $TERM
           EOF
 
-          # 5. ضغط
+          # 5. ضغط - زي ما هو
           mksquashfs rootfs iso/casper/filesystem.squashfs -comp xz -b 1048576 -no-xattrs
 
-          # 6. GRUB بالجملة في البوت
+          # 6. GRUB شيك للتمظره [KSO]
           cat > iso/boot/grub/grub.cfg <<'EOF'
           set timeout=5
           set default=0
-          echo "برمجة عبد الله و عبد الرحمن هاني [KSO]"
-          menuentry "KSO-HANI V34.11 Live System [KSO]" {
+          set menu_color_normal=cyan/black
+          set menu_color_highlight=white/cyan
+          
+          echo "========================================"
+          echo " KSO-HANI V34.12 [KSO]"
+          echo " برمجة عبد الله و عبد الرحمن هاني"
+          echo "========================================"
+
+          menuentry "KSO-HANI V34.12 Live System [KSO]" {
             linux /boot/vmlinuz boot=casper quiet splash
             initrd /boot/initrd.img
           }
           EOF
-          grub-mkrescue -o KSO-HANI-V34.11.iso iso
+          grub-mkrescue -o KSO-HANI-V34.12.iso iso
 
-          ls -lh KSO-HANI-V34.11.iso
+          ls -lh KSO-HANI-V34.12.iso
           ls -lh iso/casper/filesystem.squashfs
 
       - name: Upload ISO [KSO]
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-HANI-V34.11-[KSO]
-          path: KSO-HANI-V34.11.iso
+          name: KSO-HANI-V34.12-[KSO]
+          path: KSO-HANI-V34.12.iso
