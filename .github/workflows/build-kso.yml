@@ -59,7 +59,7 @@ jobs:
           set menu_color_highlight=white/cyan
           echo "========================================"
           echo " KSO-HANI V34.13 [KSO]"
-          echo " برمجة عبد الله و عبد الرحمن هاني"
+          echo "  [ kso ]برمجة عبد الله و عبد الرحمن هاني"
           echo "========================================"
           menuentry "KSO-HANI V34.13 Live System [KSO]" {
             linux /boot/vmlinuz boot=casper quiet splash
