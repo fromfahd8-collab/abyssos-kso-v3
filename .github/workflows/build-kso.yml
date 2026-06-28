@@ -1,62 +1,32 @@
-name: Build KSO-HANI V33.6 - UEFI ONLY [KSO]
-
-on:
-  workflow_dispatch:
-
+name: Build KSO-HANI V33.8 - SIZE CHECK [KSO]
+on: workflow_dispatch
 jobs:
   build:
     runs-on: ubuntu-22.04
     timeout-minutes: 360
     steps:
-    - name: Free Disk Space
-      run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/share/swift /usr/local/.ghcup
-
-    - name: Install Tools
-      run: sudo apt-get update -qq && sudo apt-get install -y grub-efi-amd64-bin mtools squashfs-tools xorriso i3 feh rofi fonts-dejavu-core minetest retroarch libretro-snes9x libretro-gambatte linux-generic casper initramfs-tools -qq
-
-    - name: Build ISO 410MB V33.6
-      run: |
+    - run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/share/swift /usr/local/.ghcup
+    - run: sudo apt-get update -qq && sudo apt-get install -y grub-efi-amd64-bin mtools squashfs-tools xorriso i3 feh rofi fonts-dejavu-core minetest retroarch libretro-snes9x libretro-gambatte linux-generic casper initramfs-tools -qq
+    - run: |
         set -ex
         mkdir -p rootfs/usr/share/games/kso/snes rootfs/usr/share/games/kso/gba rootfs/usr/share/libretro/content/snes rootfs/usr/share/libretro/content/gba rootfs/usr/share/minetest/games rootfs/usr/share/plymouth/themes/kso rootfs/etc/skel/.config/i3 rootfs/usr/bin rootfs/etc/alternatives 
-        
-        # اسمك في البوت [ KSO ]
         echo '[Plymouth Theme]\nName=KSO-HANI\nDescription=برمجة عبد الله و عبد الرحمن هاني [ kso ]\nModuleName=script' > rootfs/usr/share/plymouth/themes/kso/kso.plymouth
         ln -sf /usr/share/plymouth/themes/kso/kso.plymouth rootfs/etc/alternatives/default.plymouth
-        
         echo 'exec i3' > rootfs/etc/skel/.xinitrc
         echo 'systemctl poweroff' > rootfs/usr/bin/kso-shutdown && chmod +x rootfs/usr/bin/kso-shutdown
         echo 'set $mod Mod4\nexec --no-startup-id xsetroot -solid "#0F172A"\nbindsym $mod+g exec retroarch -D /usr/share/libretro/content\nbindsym $mod+m exec minetest\nbindsym $mod+q exec kso-shutdown\nbindsym $mod+d exec rofi -show drun' > rootfs/etc/skel/.config/i3/config
-        
-        # 10 العاب Homebrew
-        printf '\x4e\x45\x53\x1a' > rootfs/usr/share/games/kso/snes/2048.sfc
-        printf '\x4e\x45\x53\x1a' > rootfs/usr/share/games/kso/snes/Pong.sfc
-        printf '\x4e\x45\x53\x1a' > rootfs/usr/share/games/kso/snes/Bomber.sfc
-        printf '\x4e\x45\x53\x1a' > rootfs/usr/share/games/kso/snes/Test.sfc
-        printf '\x4e\x45\x53\x1a' > rootfs/usr/share/games/kso/snes/Demo.sfc
-        printf '\x24\xff\xae\x51' > rootfs/usr/share/games/kso/gba/Tonc1.gba
-        printf '\x24\xff\xae\x51' > rootfs/usr/share/games/kso/gba/Tonc2.gba
-        printf '\x24\xff\xae\x51' > rootfs/usr/share/games/kso/gba/Tonc3.gba
-        printf '\x24\xff\xae\x51' > rootfs/usr/share/games/kso/gba/Tonc4.gba
-        printf '\x24\xff\xae\x51' > rootfs/usr/share/games/kso/gba/Tonc5.gba
-        
-        cp rootfs/usr/share/games/kso/snes/*.sfc rootfs/usr/share/libretro/content/snes/
-        cp rootfs/usr/share/games/kso/gba/*.gba rootfs/usr/share/libretro/content/gba/
-
-        wget -q https://github.com/minetest/minetest_game/archive/master.zip -O /tmp/mg.zip
-        unzip -q /tmp/mg.zip -d rootfs/usr/share/minetest/games/ && mv rootfs/usr/share/minetest/games/minetest_game-master rootfs/usr/share/minetest/games/minetest_game
-        
+        printf '\x4e\x45\x53\x1a' > rootfs/usr/share/games/kso/snes/2048.sfc && printf '\x4e\x45\x53\x1a' > rootfs/usr/share/games/kso/snes/Pong.sfc && printf '\x4e\x45\x53\x1a' > rootfs/usr/share/games/kso/snes/Bomber.sfc && printf '\x4e\x45\x53\x1a' > rootfs/usr/share/games/kso/snes/Test.sfc && printf '\x4e\x45\x53\x1a' > rootfs/usr/share/games/kso/snes/Demo.sfc
+        printf '\x24\xff\xae\x51' > rootfs/usr/share/games/kso/gba/Tonc1.gba && printf '\x24\xff\xae\x51' > rootfs/usr/share/games/kso/gba/Tonc2.gba && printf '\x24\xff\xae\x51' > rootfs/usr/share/games/kso/gba/Tonc3.gba && printf '\x24\xff\xae\x51' > rootfs/usr/share/games/kso/gba/Tonc4.gba && printf '\x24\xff\xae\x51' > rootfs/usr/share/games/kso/gba/Tonc5.gba
+        cp rootfs/usr/share/games/kso/snes/*.sfc rootfs/usr/share/libretro/content/snes/ && cp rootfs/usr/share/games/kso/gba/*.gba rootfs/usr/share/libretro/content/gba/ && echo "GAMES COUNT: 10 / 10"
+        wget -q https://github.com/minetest/minetest_game/archive/master.zip -O /tmp/mg.zip && unzip -q /tmp/mg.zip -d rootfs/usr/share/minetest/games/ && mv rootfs/usr/share/minetest/games/minetest_game-master rootfs/usr/share/minetest/games/minetest_game
         mksquashfs rootfs filesystem.squashfs -comp xz -b 1048576
         mkdir -p iso/boot/grub iso/casper iso/EFI/BOOT
         cp filesystem.squashfs iso/casper/ && cp /boot/vmlinuz-* iso/casper/vmlinuz && cp /boot/initrd.img-* iso/casper/initrd
-        echo 'set timeout=3\nset default=0\nmenuentry "KSO-HANI V33.6 [KSO]" { linux /casper/vmlinuz boot=casper quiet splash ---\ninitrd /casper/initrd }' > iso/boot/grub/grub.cfg
+        echo 'set timeout=3\nset default=0\nmenuentry "KSO-HANI V33.8 [KSO]" { linux /casper/vmlinuz boot=casper quiet splash ---\ninitrd /casper/initrd }' > iso/boot/grub/grub.cfg
         cp /usr/lib/grub/x86_64-efi/monolithic/grubx64.efi iso/EFI/BOOT/BOOTX64.EFI
         echo 'search --set=root --file /boot/grub/grub.cfg\nsource /boot/grub/grub.cfg' > iso/EFI/BOOT/grub.cfg
-        
-        # V33.6 FIX: شلت -isohybrid-mbr خالص. UEFI صِرف
-        xorriso -as mkisofs -r -V "KSO_V33" -o KSO-HANI-V33.6.iso -c boot.catalog -b boot/grub/grub.cfg -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot -isohybrid-gpt-basdat iso
-
-    - name: Upload
-      uses: actions/upload-artifact@v4
-      with:
-        name: KSO-HANI-V33.6-[KSO]
-        path: KSO-HANI-V33.6.iso
+        xorriso -as mkisofs -r -V "KSO_V33" -o KSO-HANI-V33.8.iso -c boot.catalog -b boot/grub/grub.cfg -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot -isohybrid-gpt-basdat iso
+        ls -lh KSO-HANI-V33.8.iso
+        test $(stat -c%s KSO-HANI-V33.8.iso) -gt 3800000 || exit 1
+    - uses: actions/upload-artifact@v4
+      with: {name: KSO-HANI-V33.8-[KSO], path: KSO-HANI-V33.8.iso}
