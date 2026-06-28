@@ -1,4 +1,4 @@
-name: Build KSO-HANI V34.10 - BOOT MENU [KSO]
+name: Build KSO-HANI V34.11 - FIXED dpkg-deb [KSO]
 on: workflow_dispatch
 
 jobs:
@@ -15,10 +15,12 @@ jobs:
 
           mkdir -p rootfs/boot/grub iso/boot/grub iso/EFI/boot iso/casper
 
-          # 1. الكيرنل بـ sudo
-          sudo dpkg -x /var/cache/apt/archives/linux-image-*.deb /tmp/kernel
+          # 1. الكيرنل بـ dpkg-deb مش dpkg [KSO] ده التعديل
+          sudo dpkg-deb -x /var/cache/apt/archives/linux-image-*.deb /tmp/kernel
           sudo cp /tmp/kernel/boot/vmlinuz-* iso/boot/vmlinuz
           sudo cp /tmp/kernel/boot/initrd.img-* iso/boot/initrd.img
+          echo "[KSO] Kernel:"
+          ls -lh iso/boot/
 
           # 2. الالعاب
           sudo chroot rootfs apt-get update
@@ -44,27 +46,23 @@ jobs:
           # 5. ضغط
           mksquashfs rootfs iso/casper/filesystem.squashfs -comp xz -b 1048576 -no-xattrs
 
-          # 6. GRUB فيه الجملة في البوت نفسه [KSO]
+          # 6. GRUB بالجملة في البوت
           cat > iso/boot/grub/grub.cfg <<'EOF'
           set timeout=5
           set default=0
-
-          set menu_color_normal=white/black
-          set menu_color_highlight=black/white
-
           echo "برمجة عبد الله و عبد الرحمن هاني [KSO]"
-
-          menuentry "KSO-HANI V34.10 Live System [KSO]" {
+          menuentry "KSO-HANI V34.11 Live System [KSO]" {
             linux /boot/vmlinuz boot=casper quiet splash
             initrd /boot/initrd.img
           }
           EOF
-          grub-mkrescue -o KSO-HANI-V34.10.iso iso
+          grub-mkrescue -o KSO-HANI-V34.11.iso iso
 
-          ls -lh KSO-HANI-V34.10.iso
+          ls -lh KSO-HANI-V34.11.iso
+          ls -lh iso/casper/filesystem.squashfs
 
       - name: Upload ISO [KSO]
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-HANI-V34.10-[KSO]
-          path: KSO-HANI-V34.10.iso
+          name: KSO-HANI-V34.11-[KSO]
+          path: KSO-HANI-V34.11.iso
