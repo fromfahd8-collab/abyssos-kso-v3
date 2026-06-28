@@ -1,4 +1,4 @@
-name: Build KSO-HANI V31.5 - GAMES WORK [KSO]
+name: Build KSO-HANI V31.6 - FINAL FIX [KSO]
 
 on:
   workflow_dispatch:
@@ -14,11 +14,11 @@ jobs:
     - name: Install Tools
       run: sudo apt-get update -qq && sudo apt-get install -y grub-efi-amd64-bin mtools squashfs-tools xorriso i3 feh rofi fonts-dejavu-core minetest retroarch libretro-snes9x libretro-gambatte linux-generic casper initramfs-tools unzip wget -qq
 
-    - name: Build ISO 410MB V31.5
+    - name: Build ISO 410MB V31.6
       run: |
         set -ex
-        # V31.5 FIX: نحط الالعاب في المكان اللي RetroArch بيدور فيه
-        mkdir -p rootfs
+        # V31.6 FIX: ده السطر اللي كان ناقص ووقعنا سطر 76
+        mkdir -p rootfs/usr/share/games/kso
         mkdir -p rootfs/usr/share/games/kso/snes
         mkdir -p rootfs/usr/share/games/kso/gba 
         mkdir -p rootfs/usr/share/libretro/content/snes
@@ -34,7 +34,6 @@ jobs:
         
         echo 'exec i3' > rootfs/etc/skel/.xinitrc
         echo 'systemctl poweroff' > rootfs/usr/bin/kso-shutdown && chmod +x rootfs/usr/bin/kso-shutdown
-        # V31.5 FIX: نفتح RetroArch على فولدر الالعاب على طول
         echo 'set $mod Mod4\nexec --no-startup-id xsetroot -solid "#0F172A"\nbindsym $mod+g exec retroarch -D /usr/share/libretro/content\nbindsym $mod+m exec minetest\nbindsym $mod+q exec kso-shutdown\nbindsym $mod+d exec rofi -show drun' > rootfs/etc/skel/.config/i3/config
         
         cd rootfs/usr/share/minetest/games/
@@ -45,13 +44,11 @@ jobs:
         wget -q https://github.com/libretro/test-roms/archive/refs/heads/master.zip -O roms.zip
         unzip -q roms.zip 
         
-        # V31.5 FIX: ننسخ الالعاب مرتين عشان نضمن التشغيل
         cp test-roms-master/snes/*.sfc snes/
         cp test-roms-master/gba/*.gba gba/
         cp test-roms-master/snes/*.sfc ../libretro/content/snes/
         cp test-roms-master/gba/*.gba ../libretro/content/gba/
         
-        # فحص قوي: لازم 10 العاب
         COUNT=$(find ../libretro/content -type f -name "*.sfc" -o -name "*.gba" | wc -l)
         echo "GAMES COUNT: $COUNT / 10"
         ls -lh ../libretro/content/snes/ ../libretro/content/gba/
@@ -63,13 +60,13 @@ jobs:
         
         mkdir iso && mkdir iso/boot/grub iso/casper iso/EFI/BOOT
         cp filesystem.squashfs iso/casper/ && cp /boot/vmlinuz-* iso/casper/vmlinuz && cp /boot/initrd.img-* iso/casper/initrd
-        echo 'set timeout=3\nset default=0\nmenuentry "KSO-HANI V31.5 [KSO]" { linux /casper/vmlinuz boot=casper quiet splash ---\ninitrd /casper/initrd }' > iso/boot/grub/grub.cfg
+        echo 'set timeout=3\nset default=0\nmenuentry "KSO-HANI V31.6 [KSO]" { linux /casper/vmlinuz boot=casper quiet splash ---\ninitrd /casper/initrd }' > iso/boot/grub/grub.cfg
         cp /usr/lib/grub/x86_64-efi/monolithic/grubx64.efi iso/EFI/BOOT/BOOTX64.EFI
         dd if=/dev/zero of=iso/boot/grub/efi.img bs=1M count=10 && mformat -i iso/boot/grub/efi.img :: && mcopy -i iso/boot/grub/efi.img iso/EFI ::/EFI
-        xorriso -as mkisofs -r -V "KSO_V31" -o KSO-HANI-V31.5.iso -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin -c boot.catalog -b boot/grub/efi.img -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot -isohybrid-gpt-basdat -graft-points /boot/grub/grub.cfg=iso/boot/grub/grub.cfg /EFI=iso/EFI /casper=iso/casper /boot/grub/efi.img=iso/boot/grub/efi.img
+        xorriso -as mkisofs -r -V "KSO_V31" -o KSO-HANI-V31.6.iso -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin -c boot.catalog -b boot/grub/efi.img -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot -isohybrid-gpt-basdat -graft-points /boot/grub/grub.cfg=iso/boot/grub/grub.cfg /EFI=iso/EFI /casper=iso/casper /boot/grub/efi.img=iso/boot/grub/efi.img
 
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: KSO-HANI-V31.5-[KSO]
-        path: KSO-HANI-V31.5.iso
+        name: KSO-HANI-V31.6-[KSO]
+        path: KSO-HANI-V31.6.iso
