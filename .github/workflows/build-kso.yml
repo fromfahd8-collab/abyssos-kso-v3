@@ -1,4 +1,4 @@
-name: Build KSO-HANI V34.7 - AUTO BOOT [KSO]
+name: Build KSO-HANI V34.8 - SUDO KERNEL [KSO]
 on: workflow_dispatch
 
 jobs:
@@ -15,11 +15,11 @@ jobs:
 
           mkdir -p rootfs/boot/grub iso/boot/grub iso/EFI/boot iso/casper
 
-          # 1. الكيرنل العادي
-          KERNEL=$(ls /boot/vmlinuz-*generic* | head -n1)
-          cp "$KERNEL" iso/boot/vmlinuz
-          INITRD=$(ls /boot/initrd.img-*generic* | head -n1)
-          cp "$INITRD" iso/boot/initrd.img
+          # 1. نجيب الكيرنل بـ sudo غصب عن Github [KSO]
+          sudo cp /boot/vmlinuz-*generic* iso/boot/vmlinuz
+          sudo cp /boot/initrd.img-*generic* iso/boot/initrd.img
+          sudo chmod 644 iso/boot/vmlinuz iso/boot/initrd.img
+          echo "[KSO] Kernel copied with sudo"
 
           # 2. الالعاب
           sudo chroot rootfs apt-get update
@@ -32,7 +32,7 @@ jobs:
           bindsym $mod+g exec gnome-games
           bindsym $mod+m exec minetest
           bindsym $mod+q exec shutdown now
-          exec_always --no-startup-id xsetroot -name "KSO-HANI V34.7 [KSO]"
+          exec_always --no-startup-id xsetroot -name "KSO-HANI V34.8 [KSO]"
           EOF
 
           # 4. دخول اوتوماتيك
@@ -46,25 +46,21 @@ jobs:
           # 5. نضغط السيستم
           mksquashfs rootfs iso/casper/filesystem.squashfs -comp xz -b 1048576 -no-xattrs
 
-          # 6. GRUB = يدخل لوحده بعد 3 ثواني + الجملة ثابته [KSO]
+          # 6. GRUB بوت اوتوماتيك 3 ثواني
           cat > iso/boot/grub/grub.cfg <<'EOF'
           set timeout=3
           set default=0
-          set menu_color_normal=white/black
-          set menu_color_highlight=black/light-gray
-
-          # دي الجملة اللي هتفضل ظاهرة في البوت
           menuentry "برمجة عبد الله و عبد الرحمن هاني [KSO]" {
             linux /boot/vmlinuz boot=casper quiet splash
             initrd /boot/initrd.img
           }
           EOF
-          grub-mkrescue -o KSO-HANI-V34.7.iso iso
+          grub-mkrescue -o KSO-HANI-V34.8.iso iso
 
-          ls -lh KSO-HANI-V34.7.iso
+          ls -lh KSO-HANI-V34.8.iso
 
       - name: Upload ISO [KSO]
         uses: actions/upload-artifact@v4
         with:
-          name: KSO-HANI-V34.7-[KSO]
-          path: KSO-HANI-V34.7.iso
+          name: KSO-HANI-V34.8-[KSO]
+          path: KSO-HANI-V34.8.iso
