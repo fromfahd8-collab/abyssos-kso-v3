@@ -14,26 +14,22 @@ jobs:
         run: choco install ffmpeg -y
       
       - name: تثبيت المتطلبات
-        run: pip install yt-dlp[default] customtkinter pyinstaller pillow --upgrade
-      
-      - name: تحضير الأيقونة
         run: |
-          curl -L -o icon.ico https://raw.githubusercontent.com/sandwich1988/icon/main/snaptube.ico
-          if ($?) {
-            echo "✅ Icon downloaded successfully"
-          } else {
-            echo "⚠️ Using default icon"
-            python -c "from PIL import Image; img = Image.new('RGB', (64,64), color='#2b7a78'); img.save('icon.ico', format='ICO', sizes=[(64,64)])"
-          }
-        shell: pwsh
+          pip install yt-dlp customtkinter pillow --upgrade
+          pip install pyinstaller --upgrade
       
       - name: إنشاء ملف main.py
         run: |
-          $code = @'
+          @"
           import customtkinter as ctk
-          import yt_dlp, os, threading, tkinter.filedialog as fd
+          import yt_dlp
+          import os
+          import threading
+          import tkinter.filedialog as fd
           from tkinter import messagebox
-          import webbrowser, datetime, re, sys, ctypes
+          import webbrowser
+          import datetime
+          import sys
 
           ctk.set_appearance_mode("dark")
           ctk.set_default_color_theme("blue")
@@ -41,10 +37,6 @@ jobs:
           app = ctk.CTk()
           app.geometry("900x750")
           app.title("KSO SnapTube - تحميل الفيديوهات والصوت")
-          try: 
-              app.iconbitmap("icon.ico")
-          except: 
-              pass
 
           save_path = os.path.join(os.path.expanduser("~"), "Downloads")
           download_type = "mp3"
@@ -60,7 +52,7 @@ jobs:
           def choose_path():
               global save_path
               temp = fd.askdirectory()
-              if temp: 
+              if temp:
                   save_path = temp
                   path_label.configure(text=f"📁 مسار التحميل: {save_path}")
 
@@ -78,12 +70,12 @@ jobs:
 
           def download():
               url = entry.get().strip()
-              if not url: 
+              if not url:
                   messagebox.showwarning("تنبيه", "ادخل رابط الفيديو")
                   return
-              
+
               btn.configure(state="disabled", text="⏳ جاري التحميل...")
-              
+
               try:
                   if download_type == "mp3":
                       opts = {
@@ -94,18 +86,16 @@ jobs:
                               "preferredquality": "320"
                           }],
                           "outtmpl": f"{save_path}/%(playlist_title)s/%(title)s.%(ext)s",
-                          "progress_hooks": [lambda d: log(f"تحميل: {d.get('_percent_str','')}", "info") if d.get('status') == 'downloading' else None]
                       }
                   else:
                       opts = {
                           "format": get_quality(selected_quality),
                           "outtmpl": f"{save_path}/%(playlist_title)s/%(title)s.%(ext)s",
-                          "progress_hooks": [lambda d: log(f"تحميل: {d.get('_percent_str','')}", "info") if d.get('status') == 'downloading' else None]
                       }
-                  
+
                   with yt_dlp.YoutubeDL(opts) as ydl:
                       info = ydl.extract_info(url, download=False)
-                      
+
                       if 'entries' in info:
                           entries = [e for e in info['entries'] if e]
                           if entries:
@@ -116,23 +106,35 @@ jobs:
                               return
                       else:
                           log("تم العثور على فيديو واحد", "success")
-                      
+
                       ydl.download([url])
                       log("✅ تم التحميل بنجاح", "success")
                       messagebox.showinfo("نجاح", "تم التحميل بنجاح!")
-                      
+
               except Exception as e:
                   log(f"❌ خطأ: {str(e)}", "error")
                   messagebox.showerror("خطأ", str(e))
-              
+
               btn.configure(state="normal", text="🚀 ابدأ التحميل")
 
           def start():
               threading.Thread(target=download, daemon=True).start()
 
+          def on_type_change(choice):
+              if choice == "MP3 (صوت)":
+                  quality_menu.configure(state="disabled")
+              else:
+                  quality_menu.configure(state="normal")
+
+          def open_folder():
+              os.startfile(save_path)
+
           # واجهة المستخدم
-          ctk.CTkLabel(app, text="🎵 KSO SnapTube", font=("Arial", 30, "bold")).pack(pady=15)
-          ctk.CTkLabel(app, text="تحميل فيديوهات وصوت من يوتيوب بجودة عالية", font=("Arial", 14)).pack(pady=5)
+          title = ctk.CTkLabel(app, text="🎵 KSO SnapTube", font=("Arial", 30, "bold"))
+          title.pack(pady=15)
+
+          subtitle = ctk.CTkLabel(app, text="تحميل فيديوهات وصوت من يوتيوب بجودة عالية", font=("Arial", 14))
+          subtitle.pack(pady=5)
 
           f1 = ctk.CTkFrame(app)
           f1.pack(pady=15, padx=20, fill="x")
@@ -140,16 +142,11 @@ jobs:
           entry = ctk.CTkEntry(f1, placeholder_text="https://youtube.com/... - رابط الفيديو أو البلاي ليست", height=40, font=("Arial", 13))
           entry.pack(side="left", padx=10, pady=10, expand=True, fill="x")
 
-          ctk.CTkButton(app, text="🚀 ابدأ التحميل", command=start, height=50, font=("Arial", 16, "bold"), fg_color="#2b7a78").pack(pady=10, padx=20, fill="x")
+          btn = ctk.CTkButton(app, text="🚀 ابدأ التحميل", command=start, height=50, font=("Arial", 16, "bold"), fg_color="#2b7a78")
+          btn.pack(pady=10, padx=20, fill="x")
 
           f2 = ctk.CTkFrame(app)
           f2.pack(pady=10, padx=20, fill="x")
-
-          def on_type_change(choice):
-              if choice == "MP3 (صوت)":
-                  quality_menu.configure(state="disabled")
-              else:
-                  quality_menu.configure(state="normal")
 
           menu1 = ctk.CTkOptionMenu(f2, values=["MP3 (صوت)", "MP4 (فيديو)"], command=on_type_change, width=150)
           menu1.pack(side="left", padx=10)
@@ -160,8 +157,11 @@ jobs:
           quality_menu.set("720p")
           quality_menu.configure(state="disabled")
 
-          ctk.CTkButton(f2, text="📂 اختيار المسار", command=choose_path, width=150).pack(side="left", padx=10)
-          ctk.CTkButton(f2, text="📁 فتح المجلد", command=lambda: os.startfile(save_path), width=120).pack(side="left", padx=10)
+          btn_path = ctk.CTkButton(f2, text="📂 اختيار المسار", command=choose_path, width=150)
+          btn_path.pack(side="left", padx=10)
+
+          btn_folder = ctk.CTkButton(f2, text="📁 فتح المجلد", command=open_folder, width=120)
+          btn_folder.pack(side="left", padx=10)
 
           path_label = ctk.CTkLabel(app, text=f"📁 مسار التحميل: {save_path}", font=("Arial", 12))
           path_label.pack(pady=5)
@@ -169,18 +169,19 @@ jobs:
           listbox = ctk.CTkTextbox(app, height=300, font=("Consolas", 11))
           listbox.pack(pady=10, padx=20, fill="both", expand=True)
 
-          ctk.CTkLabel(app, text="KSO SnapTube v2.0 | تحميل بجودة تصل إلى 4K", font=("Arial", 10)).pack(pady=5)
+          footer = ctk.CTkLabel(app, text="KSO SnapTube v2.0 | تحميل بجودة تصل إلى 4K", font=("Arial", 10))
+          footer.pack(pady=5)
 
           log("🎵 KSO SnapTube جاهز للتحميل!", "success")
           log("💡 اختر نوع التحميل والجودة", "info")
 
           app.mainloop()
-          '@
-          $code | Out-File -FilePath main.py -Encoding utf8
+          "@ | Out-File -FilePath main.py -Encoding utf8
         shell: pwsh
       
       - name: بناء البرنامج
-        run: pyinstaller --onefile --noconsole --name "KSO_SnapTube" --icon=icon.ico --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
+        run: |
+          pyinstaller --onefile --noconsole --name "KSO_SnapTube" --icon=icon.ico --hidden-import=yt_dlp --hidden-import=websocket --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
       
       - name: عمل Installer
         run: |
