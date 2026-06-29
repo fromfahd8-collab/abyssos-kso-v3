@@ -1,4 +1,4 @@
-name: Build SnapTube KSO v1.3 [KSO] EXE
+name: Build SnapTube KSO v1.4 [KSO] عربي
 
 on:
   workflow_dispatch:
@@ -25,8 +25,8 @@ jobs:
           const png2ico = require('png-to-ico');
           const canvas = createCanvas(256, 256);
           const ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#0f0f0f'; ctx.fillRect(0,0,256,256);
-          ctx.fillStyle = '#FF0000'; ctx.font = 'bold 120px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#FF0000'; ctx.fillRect(0,0,256,256);
+          ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 120px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           ctx.fillText('KSO', 128, 100);
           ctx.beginPath(); ctx.moveTo(128, 140); ctx.lineTo(90, 180); ctx.lineTo(166, 180); ctx.closePath(); ctx.fill();
           const buf = canvas.toBuffer('image/png');
@@ -41,16 +41,17 @@ jobs:
           @"
           {
             "name": "snaptube-kso",
-            "version": "1.3.0",
+            "version": "1.4.0",
             "main": "main.js",
             "scripts": { "build": "electron-builder --win" },
             "devDependencies": { "electron": "^30.0.0", "electron-builder": "^24.13.3" },
             "build": { 
               "appId": "com.kso.snaptube", 
+              "productName": "SnapTube KSO",
               "publish": "never",
               "files": ["**/*"],
               "extraResources": [{"from": "bin/", "to": "bin/"}],
-              "win": { "target": "nsis", "artifactName": "SnapTube-KSO-v1.3-Setup.exe", "icon": "build/icon.ico" } 
+              "win": { "target": "nsis", "artifactName": "SnapTube-KSO-v1.4-Setup.exe", "icon": "build/icon.ico" } 
             }
           }
           "@ | Out-File package.json -Encoding utf8
@@ -68,26 +69,26 @@ jobs:
             win = new BrowserWindow({ width: 1200, height: 800, icon: path.join(__dirname, 'build/icon.ico'), webPreferences: { preload: path.join(__dirname, 'preload.js') } });
             view = new BrowserView({ webPreferences: { preload: path.join(__dirname, 'preload.js') } });
             win.setBrowserView(view);
-            view.setBounds({ x: 0, y: 50, width: 1200, height: 750 });
-            view.webContents.loadURL('https://www.youtube.com');
+            view.setBounds({ x: 0, y: 60, width: 1200, height: 740 });
+            view.webContents.loadURL('https://m.youtube.com');
             view.webContents.session.webRequest.onBeforeRequest((details, cb) => {
               if(details.url.includes('ads') || details.url.includes('doubleclick') || details.url.includes('googlesyndication')) cb({cancel: true}); else cb({cancel: false});
             });
             view.webContents.on('dom-ready', () => {
-              view.webContents.executeJavaScript(` setInterval(()=>{ let v = document.querySelector('video'); if(v &&!document.getElementById('ksoBtn')){ let b = document.createElement('button'); b.id='ksoBtn'; b.innerText='⬇️ [KSO]'; b.style='position:fixed;top:10px;right:10px;z-index:999;background:#FF0000;color:white;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:14px;'; b.onclick=()=>window.kso.getPlaylist(window.location.href); document.body.appendChild(b); } },1000); `);
+              view.webContents.executeJavaScript(` setInterval(()=>{ let v = document.querySelector('video'); if(v &&!document.getElementById('ksoBtn')){ let b = document.createElement('button'); b.id='ksoBtn'; b.innerText='⬇️ تحميل'; b.style='position:fixed;top:10px;left:10px;z-index:999;background:#FF0000;color:white;border:0;padding:10px 15px;border-radius:25px;cursor:pointer;font-size:15px;font-weight:bold;box-shadow:0 2px 5px #0008;'; b.onclick=()=>window.kso.getPlaylist(window.location.href); document.body.appendChild(b); } },1000); `);
             });
             win.loadFile('index.html');
-            win.on('resize', () => { const [w, h] = win.getContentSize(); if(currentTab==='browser'){ view.setBounds({ x: 0, y: 50, width: w, height: h-50 }); } });
+            win.on('resize', () => { const [w, h] = win.getContentSize(); if(currentTab==='browser'){ view.setBounds({ x: 0, y: 60, width: w, height: h-60 }); } });
           });
 
-          ipcMain.on('show-browser', ()=>{ currentTab='browser'; view.setBounds({ x: 0, y: 50, width: win.getContentSize()[0], height: win.getContentSize()[1]-50 });
+          ipcMain.on('show-browser', ()=>{ currentTab='browser'; view.setBounds({ x: 0, y: 60, width: win.getContentSize()[0], height: win.getContentSize()[1]-60 });
           ipcMain.on('hide-browser', ()=>{ currentTab='downloads'; view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
 
           ipcMain.handle('get-playlist', async (e, url) => {
             return new Promise((resolve) => {
               exec(`"${ytdlpPath}" --dump-json --flat-playlist --no-download "${url}"`, {maxBuffer: 1024*1024*10}, (err, stdout) => {
                 if(err) return resolve([]);
-                const items = stdout.trim().split('\n').map(l => JSON.parse(l));
+                const items = stdout.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
                 resolve(items.map(i => ({id: i.id, title: i.title})));
               });
             });
@@ -103,7 +104,7 @@ jobs:
           });
 
           ipcMain.handle('pick-folder', async () => {
-            const { filePaths } = await dialog.showOpenDialog({properties: ['openDirectory']});
+            const { filePaths } = await dialog.showOpenDialog({properties: ['openDirectory'], title: 'اختر فولدر التحميل'});
             if(filePaths[0]){ downloadPath = filePaths[0]; }
             return downloadPath;
           });
@@ -132,25 +133,40 @@ jobs:
           "@ | Out-File preload.js -Encoding utf8
           
           @"
-          <body style="background:#0f0f0f; color:white; font-family:Arial; margin:0; overflow:hidden;">
-            <div style="display:flex; background:#181818; padding:8px; gap:10px; align-items:center; height:50px; box-sizing:border-box;">
-              <b style="color:#FF0000;">SnapTube [KSO] v1.3</b> 
-              <button onclick="showTab('browser')">🏠 تصفح</button>
+          <html dir="rtl" lang="ar">
+          <head><meta charset="UTF-8"><style>
+            body{background:#0f0f0f; color:#fff; font-family: 'Cairo', Arial; margin:0; overflow:hidden;}
+           .header{display:flex; background:#FF0000; padding:10px 15px; gap:15px; align-items:center; height:60px; box-sizing:border-box; box-shadow:0 2px 5px #0005;}
+           .header b{font-size:20px;}
+           .header button{background:#0003; border:0; color:white; padding:8px 15px; border-radius:20px; cursor:pointer; font-size:14px; font-weight:bold;}
+           .header button:hover{background:#0006;}
+           .card{background:#1e1e1e; padding:12px; margin:10px 0; border-radius:12px; display:flex; justify-content:space-between; align-items:center;}
+           .card button{background:#FF0000; border:0; color:white; border-radius:8px; padding:6px 12px; cursor:pointer;}
+            #popup{background:#1a1a1a; margin:5% auto; padding:20px; width:90%; max-width:700px; border-radius:15px; text-align:right;}
+            #popup select, #popup button{padding:8px 12px; border-radius:8px; border:0; margin:5px; font-weight:bold;}
+            #popup button:first-of-type{background:#FF0000; color:white;}
+          </style></head>
+          <body>
+            <div class="header">
+              <b>SnapTube KSO</b> 
+              <button onclick="showTab('browser')">🏠 الرئيسية</button>
               <button onclick="showTab('downloads')">📁 مكتبتي</button>
-              <button onclick="kso.pickFolder().then(p=>document.getElementById('path').innerText=p.split('\\').pop())">📂 مسار: <span id="path"></span></button>
+              <button onclick="kso.pickFolder().then(p=>document.getElementById('path').innerText='📂 ' + p.split('\\').pop())">تغيير المسار</button>
+              <span id="path" style="margin-right:auto; font-size:12px; opacity:0.8;"></span>
             </div>
-            <div id="downloads" style="display:none; padding:15px; height:calc(100vh - 50px); overflow:auto;">
-              <h3>كل الفيديوهات في المسار</h3>
-              <button onclick="kso.openFolder()">📂 فتح الفولدر</button>
+            <div id="downloads" style="display:none; padding:15px; height:calc(100vh - 60px); overflow:auto;">
+              <h3>الفيديوهات المحملة</h3>
+              <button onclick="kso.openFolder()" style="background:#333; border:0; color:white; padding:8px 12px; border-radius:8px; margin-bottom:10px;">فتح فولدر التحميل</button>
               <div id="list"></div>
             </div>
             <div id="popup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000c; z-index:1000; overflow:auto;">
-              <div style="background:#1a1a1a; margin:5% auto; padding:20px; width:80%; max-width:700px; border-radius:12px;">
-                <h3>اختر الفيديوهات [KSO]</h3>
-                <select id="format"><option value="1080">1080p</option><option value="720">720p</option><option value="mp3">MP3</option></select>
+              <div id="popup">
+                <h3>اختيار الفيديوهات للتحميل</h3>
+                <label>الجودة: </label>
+                <select id="format"><option value="1080">1080p فيديو</option><option value="720">720p فيديو</option><option value="mp3">MP3 صوت فقط</option></select>
                 <div id="plist" style="max-height:400px; overflow:auto; margin:10px 0;"></div>
-                <button onclick="startDownload()">⬇️ تحميل المحدد</button>
-                <button onclick="document.getElementById('popup').style.display='none'">❌ الغاء</button>
+                <button onclick="startDownload()">⬇️ بدء التحميل</button>
+                <button onclick="document.getElementById('popup').style.display='none'" style="background:#555;">إلغاء</button>
               </div>
             </div>
             <script>
@@ -159,15 +175,22 @@ jobs:
                 if(tab==='browser'){ document.getElementById('downloads').style.display='none'; kso.showBrowser(); } 
                 else { document.getElementById('downloads').style.display='block'; kso.hideBrowser(); loadFiles(); } 
               }
-              async function loadFiles(){ const files = await kso.getFiles(); document.getElementById('list').innerHTML = files.length? files.map(f=>`<div style="background:#222; padding:10px; margin:8px 0; border-radius:8px; display:flex; justify-content:space-between;"><div>🎬 ${f.name}</div><button onclick="kso.deleteFile('${f.path.replace(/'/g, "\\'")}').then(loadFiles)" style="background:red; border:0; color:white; border-radius:6px; padding:5px 10px;">🗑️</button></div>`).join('') : '<div>مفيش ملفات</div>'; }
+              async function loadFiles(){ 
+                const files = await kso.getFiles(); 
+                document.getElementById('list').innerHTML = files.length? files.map(f=>`<div class="card"><div>🎬 ${f.name}</div><button onclick="kso.deleteFile('${f.path.replace(/'/g, "\\'")}').then(loadFiles)">🗑️ حذف</button></div>`).join('') : '<div style="text-align:center; opacity:0.6;">مفيش ملفات محملة لسه</div>'; 
+              }
               kso.onRescan(()=>{ if(document.getElementById('downloads').style.display==='block') loadFiles(); });
-              kso.pickFolder().then(p=>document.getElementById('path').innerText=p.split('\\').pop());
+              kso.pickFolder().then(p=>document.getElementById('path').innerText='📂 ' + p.split('\\').pop());
               
               window.kso.getPlaylist = async (url) => {
                 const items = await kso.getPlaylist(url);
-                if(items.length===0){ kso.downloadList([{id:url.split('v=')[1]}], document.getElementById('format').value); return; }
+                if(items.length===0){ 
+                  let vid = url.split('v=')[1]?.split('&')[0];
+                  if(vid){ kso.downloadList([{id:vid}], document.getElementById('format').value); }
+                  return; 
+                }
                 currentItems = items;
-                document.getElementById('plist').innerHTML = items.map((i,idx)=>`<div style="background:#222; padding:8px; margin:5px 0; border-radius:6px;"><input type="checkbox" id="c${idx}" checked> <label for="c${idx}">${i.title}</label></div>`).join('');
+                document.getElementById('plist').innerHTML = items.map((i,idx)=>`<div class="card" style="padding:8px;"><input type="checkbox" id="c${idx}" checked> <label for="c${idx}">${i.title}</label></div>`).join('');
                 document.getElementById('popup').style.display='block';
               }
               function startDownload(){
@@ -178,7 +201,7 @@ jobs:
               }
               kso.onProgress(d => { console.log(d.id, d.progress || d.status); });
             </script>
-          </body>
+          </body></html>
           "@ | Out-File index.html -Encoding utf8
 
       - name: Install
@@ -189,4 +212,4 @@ jobs:
 
       - name: Upload EXE Artifact
         uses: actions/upload-artifact@v4
-        with: { name: SnapTube-KSO-v1.3, path: dist/SnapTube-KSO-v1.3-Setup.exe }
+        with: { name: SnapTube-KSO-v1.4, path: dist/SnapTube-KSO-v1.4-Setup.exe }
