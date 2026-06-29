@@ -30,7 +30,7 @@ jobs:
                       cmd = ['yt-dlp', '-P', self.path, '--newline', '--no-playlist']
                       cmd += ['-x', '--audio-format', 'mp3'] if self.quality == 'mp3' else ['-f', f'bestvideo[height<={self.quality}]+bestaudio/best']
                       process = subprocess.Popen(cmd + [url], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='ignore')
-                      title = "فيديو"
+                      title = "Video"
                       for line in process.stdout:
                           if '[download]' in line and '%' in line:
                               try: self.progress.emit(title, int(float(line.split('%')[0].split()[-1])))
@@ -45,37 +45,37 @@ jobs:
 
           class PlaylistDialog(QDialog):
               def __init__(self, videos, parent=None):
-                  super().__init__(parent); self.setWindowTitle("اختار من البلاي ليست"); self.resize(500, 400)
+                  super().__init__(parent); self.setWindowTitle("Select from Playlist"); self.resize(500, 400)
                   layout = QVBoxLayout(self); scroll = QScrollArea(); scroll.setWidgetResizable(True); w = QWidget(); v = QVBoxLayout(w); self.checkboxes = []
                   for v_data in videos: cb = QCheckBox(f"{v_data['title'][:60]}"); cb.setChecked(True); cb.url = f"https://www.youtube.com/watch?v={v_data['id']}"; v.addWidget(cb); self.checkboxes.append(cb)
                   scroll.setWidget(w); layout.addWidget(scroll)
-                  h = QHBoxLayout(); h.addWidget(QLabel("الجودة:")); self.quality_box = QComboBox(); self.quality_box.addItems(["720p", "1080p", "mp3"]); h.addWidget(self.quality_box); layout.addLayout(h)
-                  btn = QPushButton("ابدأ التحميل"); btn.clicked.connect(self.accept); layout.addWidget(btn)
+                  h = QHBoxLayout(); h.addWidget(QLabel("Quality:")); self.quality_box = QComboBox(); self.quality_box.addItems(["720p", "1080p", "mp3"]); h.addWidget(self.quality_box); layout.addLayout(h)
+                  btn = QPushButton("Start Download"); btn.clicked.connect(self.accept); layout.addWidget(btn)
               def get_selected(self): return [cb.url for cb in self.checkboxes if cb.isChecked()], self.quality_box.currentText()
 
           class MainWindow(QMainWindow):
               def __init__(self):
-                  super().__init__(); self.setWindowTitle("سناب تيوب كسو v1.0.7"); self.resize(1000, 700)
+                  super().__init__(); self.setWindowTitle("SnapTube KSO v1.0.8"); self.resize(1000, 700)
                   tabs = QTabWidget(); tabs.setTabPosition(QTabWidget.TabPosition.South); self.setCentralWidget(tabs)
-                  self.browser = QWebEngineView(); self.browser.setUrl(QUrl("https://m.youtube.com/")); self.browser.loadFinished.connect(self.inject_downloader); tabs.addTab(self.browser, "🏠 رئيسية")
-                  self.download_list = QListWidget(); tabs.addTab(self.download_list, "⬇️ التحميلات")
-                  lib_widget = QWidget(); lib_layout = QVBoxLayout(lib_widget); self.list_files = QListWidget(); self.refresh_library(); self.list_files.itemDoubleClicked.connect(lambda item: os.startfile(os.path.join(DOWNLOAD_PATH, item.text()))); btn_open = QPushButton("فتح الفولدر"); btn_open.clicked.connect(lambda: os.startfile(DOWNLOAD_PATH)); lib_layout.addWidget(self.list_files); lib_layout.addWidget(btn_open); tabs.addTab(lib_widget, "📁 مكتبتي")
+                  self.browser = QWebEngineView(); self.browser.setUrl(QUrl("https://www.youtube.com/")); self.browser.loadFinished.connect(self.inject_downloader); tabs.addTab(self.browser, "Home")
+                  self.download_list = QListWidget(); tabs.addTab(self.download_list, "Downloads")
+                  lib_widget = QWidget(); lib_layout = QVBoxLayout(lib_widget); self.list_files = QListWidget(); self.refresh_library(); self.list_files.itemDoubleClicked.connect(lambda item: os.startfile(os.path.join(DOWNLOAD_PATH, item.text()))); btn_open = QPushButton("Open Folder"); btn_open.clicked.connect(lambda: os.startfile(DOWNLOAD_PATH)); lib_layout.addWidget(self.list_files); lib_layout.addWidget(btn_open); tabs.addTab(lib_widget, "Library")
                   self.channel = QWebChannel(); self.bridge = Bridge(self); self.channel.registerObject('pyBridge', self.bridge); self.browser.page().setWebChannel(self.channel)
               def inject_downloader(self):
-                  js = """new QWebChannel(qt.webChannelTransport, c=>{window.pyBridge=c.objects.pyBridge});setInterval(()=>{let v=document.querySelector('video');if(v&&!document.getElementById('ksoBtn')){let b=document.createElement('button');b.id='ksoBtn';b.innerText='⬇️ تحميل';b.style.cssText='position:fixed;bottom:80px;right:15px;z-index:99999;background:#FF0000;color:white;padding:14px 20px;border:none;border-radius:50px;font-size:16px;font-weight:bold;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.3);';b.onclick=()=>window.pyBridge.download(location.href);document.body.appendChild(b)}},1500);"""
+                  js = """new QWebChannel(qt.webChannelTransport, c=>{window.pyBridge=c.objects.pyBridge});setInterval(()=>{let v=document.querySelector('video');if(v&&!document.getElementById('ksoBtn')){let b=document.createElement('button');b.id='ksoBtn';b.innerText='⬇️ Download';b.style.cssText='position:fixed;bottom:80px;right:15px;z-index:99999;background:#FF0000;color:white;padding:14px 20px;border:none;border-radius:50px;font-size:16px;font-weight:bold;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.3);';b.onclick=()=>window.pyBridge.download(location.href);document.body.appendChild(b)}},1500);"""
                   self.browser.page().runJavaScript(js)
               def start_download(self, url):
                   if 'list=' in url: self.handle_playlist(url)
-                  else: q, ok = QInputDialog.getItem(self, "الجودة", "نزل بجودة ايه؟", ["720p", "1080p", "mp3"], 0, False); ok and self.run_download([url], q)
+                  else: q, ok = QInputDialog.getItem(self, "Quality", "Download Quality?", ["720p", "1080p", "mp3"], 0, False); ok and self.run_download([url], q)
               def handle_playlist(self, url):
                   try:
                       r = subprocess.run(['yt-dlp', '--flat-playlist', '--dump-json', url], capture_output=True, text=True, encoding='utf-8', check=True)
                       vids = [json.loads(l) for l in r.stdout.splitlines() if l]; d = PlaylistDialog(vids, self)
                       if d.exec(): u, q = d.get_selected(); self.run_download(u, q)
-                  except Exception as e: QMessageBox.critical(self, "خطأ", f"بلاي ليست: {e}")
+                  except Exception as e: QMessageBox.critical(self, "Error", f"Playlist Error: {e}")
               def run_download(self, urls, quality):
                   self.centralWidget().setCurrentIndex(1)
-                  for u in urls: item = QListWidgetItem("0% - في الانتظار..."); self.download_list.addItem(item); t = DownloaderThread(u, DOWNLOAD_PATH, quality); t.progress.connect(lambda x,y,i=item:i.setText(f"{y}% - {x}")); t.finished.connect(lambda x,i=item:[i.setText(f"✅ تم: {x}"),self.refresh_library()]); t.start()
+                  for u in urls: item = QListWidgetItem("0% - Waiting..."); self.download_list.addItem(item); t = DownloaderThread(u, DOWNLOAD_PATH, quality); t.progress.connect(lambda x,y,i=item:i.setText(f"{y}% - {x}")); t.finished.connect(lambda x,i=item:[i.setText(f"✅ Done: {x}"),self.refresh_library()]); t.start()
               def refresh_library(self): self.list_files.clear(); [self.list_files.addItem(f) for f in sorted(os.listdir(DOWNLOAD_PATH), reverse=True) if f.endswith(('.mp4','.mp3','.mkv','.webm'))]
 
           if __name__ == '__main__': app = QApplication(sys.argv); w = MainWindow(); w.show(); sys.exit(app.exec())
@@ -83,12 +83,12 @@ jobs:
 
       - name: Create requirements.txt
         run: |
-          @"
+          @
           PyQt6
           PyQt6-WebEngine
           yt-dlp
           pyinstaller
-          "@ | Out-File -FilePath requirements.txt
+          @ | Out-File -FilePath requirements.txt
 
       - name: Install & Build EXE
         run: |
