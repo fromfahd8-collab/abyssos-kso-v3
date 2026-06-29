@@ -1,4 +1,4 @@
-name: Build SnapTube KSO v3.0.1
+name: Build SnapTube KSO v4.0.0 Portable
 on:
   workflow_dispatch:
 jobs:
@@ -19,17 +19,17 @@ jobs:
         @"
         {
           "name": "snaptube-kso",
-          "version": "3.0.1",
+          "version": "4.0.0",
           "main": "main.js",
-          "scripts": { "build": "electron-builder --win nsis" },
+          "scripts": { "build": "electron-builder --dir" },
           "devDependencies": { "electron": "^28.3.0", "electron-builder": "^24.13.3" },
           "build": {
             "appId": "com.kso.snaptube",
             "productName": "SnapTube KSO",
-            "publish": "never",
             "files": ["main.js","preload.js","index.html"],
             "extraResources": [{"from":"bin/","to":"bin/"}],
-            "nsis": { "oneClick": true, "perMachine": false }
+            "directories": { "output": "dist" },
+            "nsis": null
           }
         }
         "@ | Out-File package.json -Encoding ASCII
@@ -53,10 +53,12 @@ jobs:
         "@ | Out-File index.html -Encoding ASCII
     - name: Install
       run: npm install
-    - name: Build EXE
+    - name: Build Portable
       run: npm run build
+    - name: Zip Portable
+      run: Compress-Archive -Path dist/win-unpacked/* -DestinationPath SnapTube-KSO-v4.0.0-Portable.zip
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: SnapTube-KSO-v3.0.1
-        path: dist/*.exe
+        name: SnapTube-KSO-v4.0.0
+        path: SnapTube-KSO-v4.0.0-Portable.zip
