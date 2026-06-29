@@ -1,4 +1,4 @@
-name: Build SnapTube KSO v1.5.0 [KSO] مضمون
+name: Build SnapTube KSO v1.5.2 [KSO] نهائي
 
 on:
   workflow_dispatch:
@@ -8,31 +8,34 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/setup-node@v4
-        with: { node-version: '18' }
+        with: 
+          node-version: '18'
+          cache: 'npm'
 
       - name: Download yt-dlp with curl
         run: |
           mkdir bin
           curl -L -o bin/yt-dlp.exe https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe
-          if (!(Test-Path bin/yt-dlp.exe)) { exit 1 } # لو منزلش وقف فورا
+          if (!(Test-Path bin/yt-dlp.exe)) { exit 1 }
 
       - name: Create All Files
         run: |
           @"
           {
             "name": "snaptube-kso",
-            "version": "1.5.0",
+            "version": "1.5.2",
             "main": "main.js",
             "scripts": { "build": "electron-builder --win" },
-            "devDependencies": { "electron": "^28.3.0", "electron-builder": "^24.13.3" },
+            "devDependencies": { "electron-builder": "^24.13.3" },
+            "dependencies": { "electron": "^28.3.0" },
             "build": { 
               "appId": "com.kso.snaptube", 
               "productName": "SnapTube KSO",
-              "publish": "never",
               "files": ["**/*"],
               "extraResources": [{"from": "bin/", "to": "bin/"}],
-              "win": { "target": "nsis", "artifactName": "SnapTube-KSO-v1.5.0-Setup.exe" } 
+              "win": { "target": "nsis", "artifactName": "SnapTube-KSO-v1.5.2-Setup.exe" } 
             }
           }
           "@ | Out-File package.json -Encoding utf8
@@ -119,12 +122,12 @@ jobs:
           <meta charset="UTF-8">
           <style>
             body{background:#0f0f0f; color:#fff; font-family: 'Cairo', Arial; margin:0; overflow:hidden;}
-          .header{display:flex; background:#FF0000; padding:10px 15px; gap:15px; align-items:center; height:60px; box-sizing:border-box; box-shadow:0 2px 5px #0005;}
-          .header b{font-size:20px;}
-          .header button{background:#0003; border:0; color:white; padding:8px 15px; border-radius:20px; cursor:pointer; font-size:14px; font-weight:bold;}
-          .header button:hover{background:#0006;}
-          .card{background:#1e1e1e; padding:12px; margin:10px 0; border-radius:12px; display:flex; justify-content:space-between; align-items:center;}
-          .card button{background:#FF0000; border:0; color:white; border-radius:8px; padding:6px 12px; cursor:pointer;}
+       .header{display:flex; background:#FF0000; padding:10px 15px; gap:15px; align-items:center; height:60px; box-sizing:border-box; box-shadow:0 2px 5px #0005;}
+       .header b{font-size:20px;}
+       .header button{background:#0003; border:0; color:white; padding:8px 15px; border-radius:20px; cursor:pointer; font-size:14px; font-weight:bold;}
+       .header button:hover{background:#0006;}
+       .card{background:#1e1e1e; padding:12px; margin:10px 0; border-radius:12px; display:flex; justify-content:space-between; align-items:center;}
+       .card button{background:#FF0000; border:0; color:white; border-radius:8px; padding:6px 12px; cursor:pointer;}
             #popup{background:#1a1a1a; margin:5% auto; padding:20px; width:90%; max-width:700px; border-radius:15px; text-align:right;}
             #popup select, #popup button{padding:8px 12px; border-radius:8px; border:0; margin:5px; font-weight:bold;}
             #popup button:first-of-type{background:#FF0000; color:white;}
@@ -189,11 +192,11 @@ jobs:
           "@ | Out-File index.html -Encoding utf8
 
       - name: Install
-        run: cmd /c "npm install --legacy-peer-deps"
+        run: npm install
       
       - name: Build EXE
-        run: cmd /c "npm run build"
+        run: npm run build
 
       - name: Upload EXE Artifact
         uses: actions/upload-artifact@v4
-        with: { name: SnapTube-KSO-v1.5.0, path: dist/SnapTube-KSO-v1.5.0-Setup.exe }
+        with: { name: SnapTube-KSO-v1.5.2, path: dist/SnapTube-KSO-v1.5.2-Setup.exe }
