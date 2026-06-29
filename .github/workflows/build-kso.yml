@@ -38,9 +38,9 @@ jobs:
           sudo mkdir -p iso/casper
           sudo mksquashfs rootfs iso/casper/filesystem.squashfs -comp xz -b 1048576 -no-xattrs
 
-          # <--- الحل النهائي: كله في سطر echo واحد
+          # <--- التعديل النهائي لـ GRUB FM [KSO]
           sudo mkdir -p iso/boot/grub
-          echo -e 'set timeout=5\nset default=0\nset menu_color_normal=green/black\nset menu_color_highlight=white/green\necho "========================================"\necho " KSO-HANI V34.FINAL11 [KSO]"\necho " برمجة عبد الله و عبد الرحمن هاني [KSO]"\necho " Win+G = Games | Win+M = Minetest"\necho "========================================"\nmenuentry "KSO-HANI V34.FINAL11 Live [KSO]" {\n linux /boot/vmlinuz boot=casper quiet splash\n initrd /boot/initrd.img\n}' | sudo tee iso/boot/grub/grub.cfg > /dev/null
+          echo -e 'set timeout=5\nset default=0\nset menu_color_normal=green/black\nset menu_color_highlight=white/green\necho "========================================"\necho " KSO-HANI V34.FINAL11 [KSO]"\necho " برمجة عبد الله و عبد الرحمن هاني [KSO]"\necho " Win+G = Games | Win+M = Minetest"\necho "========================================"\nmenuentry "KSO-HANI V34.FINAL11 Live [KSO]" {\n set isofile="/KSO-HANI-V34.FINAL11.iso"\n loopback kso_loop $isofile\n linux (kso_loop)/casper/vmlinuz boot=casper iso-scan/filename=$isofile noprompt noeject nomodeset toram ---\n initrd (kso_loop)/casper/initrd\n}' | sudo tee iso/boot/grub/grub.cfg > /dev/null
 
           sudo grub-mkrescue -o KSO-HANI-V34.FINAL11.iso iso
           ls -lh KSO-HANI-V34.FINAL11.iso
