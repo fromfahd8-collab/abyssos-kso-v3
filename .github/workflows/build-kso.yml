@@ -1,4 +1,4 @@
-name: Build SnapTube KSO v1.4.3 [KSO] ثابت
+name: Build SnapTube KSO v1.4.4 [KSO] ثابت
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
           @"
           {
             "name": "snaptube-kso",
-            "version": "1.4.3",
+            "version": "1.4.4",
             "main": "main.js",
             "scripts": { "build": "electron-builder --win" },
             "devDependencies": { "electron": "^28.3.0", "electron-builder": "^24.13.3" },
@@ -31,7 +31,7 @@ jobs:
               "publish": "never",
               "files": ["**/*"],
               "extraResources": [{"from": "bin/", "to": "bin/"}],
-              "win": { "target": "nsis", "artifactName": "SnapTube-KSO-v1.4.3-Setup.exe" } 
+              "win": { "target": "nsis", "artifactName": "SnapTube-KSO-v1.4.4-Setup.exe" } 
             }
           }
           "@ | Out-File package.json -Encoding utf8
@@ -47,7 +47,7 @@ jobs:
 
           app.whenReady().then(() => {
             win = new BrowserWindow({ width: 1200, height: 800, webPreferences: { preload: path.join(__dirname, 'preload.js') } });
-            view = new BrowserView(); # شلت preload من هنا
+            view = new BrowserView();
             win.setBrowserView(view);
             view.setBounds({ x: 0, y: 60, width: 1200, height: 740 });
             view.webContents.loadURL('https://m.youtube.com');
@@ -66,7 +66,7 @@ jobs:
 
           ipcMain.handle('get-playlist', async (e, url) => {
             return new Promise((resolve) => {
-              exec(`"${ytdlpPath}" --dump-json --flat-playlist --no-download "${url}"`, {maxBuffer: 1024*1024*50}, (err, stdout) => { # 50MB للقنوات الكبيرة
+              exec(`"${ytdlpPath}" --dump-json --flat-playlist --no-download "${url}"`, {maxBuffer: 1024*1024*50}, (err, stdout) => {
                 if(err) return resolve([]);
                 const items = stdout.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
                 resolve(items.map(i => ({id: i.id, title: i.title})));
@@ -192,4 +192,4 @@ jobs:
 
       - name: Upload EXE Artifact
         uses: actions/upload-artifact@v4
-        with: { name: SnapTube-KSO-v1.4.3, path: dist/SnapTube-KSO-v1.4.3-Setup.exe }
+        with: { name: SnapTube-KSO-v1.4.4, path: dist/SnapTube-KSO-v1.4.4-Setup.exe }
