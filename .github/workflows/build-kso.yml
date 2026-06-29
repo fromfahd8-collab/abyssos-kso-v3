@@ -1,4 +1,4 @@
-name: Build SnapTube KSO v1.5.8 [KSO] هيبني
+name: Build SnapTube KSO v1.5.9 [KSO] النهائي
 on:
   workflow_dispatch:
 jobs:
@@ -17,7 +17,22 @@ jobs:
       shell: powershell
       run: |
         @"
-        {"name":"snaptube-kso","version":"1.5.8","main":"main.js","scripts":{"build":"electron-builder --win"},"devDependencies":{"electron":"^28.3.0","electron-builder":"^24.13.3"},"build":{"appId":"com.kso.snaptube","productName":"SnapTube KSO","description":"SnapTube KSO","author":"KSO","files":["**/*"],"extraResources":[{"from":"bin/","to":"bin/"}],"win":{"target":"nsis","artifactName":"SnapTube-KSO-v1.5.8-Setup.exe"}}}
+        {
+          "name": "snaptube-kso",
+          "version": "1.5.9",
+          "main": "main.js",
+          "scripts": { "build": "electron-builder --win" },
+          "devDependencies": { "electron": "^28.3.0", "electron-builder": "^24.13.3" },
+          "build": { 
+            "appId": "com.kso.snaptube", 
+            "productName": "SnapTube KSO",
+            "description": "SnapTube KSO",
+            "author": "KSO",
+            "files": [ "package.json", "main.js", "preload.js", "index.html" ],
+            "extraResources": [ { "from": "bin/", "to": "bin/" } ],
+            "win": { "target": "nsis", "artifactName": "SnapTube-KSO-v1.5.9-Setup.exe" } 
+          }
+        }
         "@ | Out-File package.json -Encoding utf8
         
         @"
@@ -38,5 +53,5 @@ jobs:
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: SnapTube-KSO-v1.5.8
+        name: SnapTube-KSO-v1.5.9
         path: dist/*.exe
