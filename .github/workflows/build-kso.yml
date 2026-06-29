@@ -18,10 +18,14 @@ jobs:
       
       - name: تحضير الأيقونة
         run: |
-          curl -L -o icon.ico https://raw.githubusercontent.com/sandwich1988/icon/main/snaptube.ico || echo "Using default icon"
-          if not exist icon.ico (
+          curl -L -o icon.ico https://raw.githubusercontent.com/sandwich1988/icon/main/snaptube.ico
+          if ($?) {
+            echo "✅ Icon downloaded successfully"
+          } else {
+            echo "⚠️ Using default icon"
             python -c "from PIL import Image; img = Image.new('RGB', (64,64), color='#2b7a78'); img.save('icon.ico', format='ICO', sizes=[(64,64)])"
-          )
+          }
+        shell: pwsh
       
       - name: إنشاء البرنامج
         run: |
@@ -96,6 +100,7 @@ jobs:
           echo log("💡 اختر نوع التحميل والجودة", "info")
           echo app.mainloop()
           ) > main.py
+        shell: cmd
       
       - name: بناء البرنامج
         run: pyinstaller --onefile --noconsole --name "KSO_SnapTube" --icon=icon.ico --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
@@ -128,6 +133,7 @@ jobs:
           echo Type: filesandordirs; Name: "{app}"
           ) > installer.iss
           "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+        shell: cmd
       
       - name: رفع الملفات
         uses: actions/upload-artifact@v4
