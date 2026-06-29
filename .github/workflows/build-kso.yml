@@ -1,4 +1,4 @@
-name: Build SnapTube KSO
+name: Build KSO SnapTube EXE
 on: workflow_dispatch
 
 jobs:
@@ -7,63 +7,132 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: {python-version: '3.11'}
+        with:
+          python-version: '3.11'
       
-      - name: Create main.py
+      - name: تثبيت FFmpeg
+        run: choco install ffmpeg -y
+      
+      - name: تثبيت المتطلبات
+        run: pip install yt-dlp[default] customtkinter pyinstaller pillow --upgrade
+      
+      - name: تحضير الأيقونة
         run: |
-          echo import sys, os, subprocess, json, re > main.py
-          echo from PyQt6.QtWidgets import * >> main.py
-          echo from PyQt6.QtWebEngineWidgets import QWebEngineView >> main.py
-          echo from PyQt6.QtCore import QUrl, QThread, pyqtSignal, QObject, pyqtSlot >> main.py
-          echo from PyQt6.QtWebChannel import QWebChannel >> main.py
-          echo DOWNLOAD_PATH = os.path.join(os.path.expanduser('~'), 'Downloads', 'SnapTube-KSO') >> main.py
-          echo os.makedirs(DOWNLOAD_PATH, exist_ok=True) >> main.py
-          echo class DownloaderThread(QThread): >> main.py
-          echo progress = pyqtSignal(str, int); finished = pyqtSignal(str) >> main.py
-          echo def __init__(self, urls, path, quality): super().__init__(); self.urls = urls if isinstance(urls, list) else [urls]; self.path = path; self.quality = quality >> main.py
-          echo def run(self): >> main.py
-          echo for url in self.urls: >> main.py
-          echo cmd = ['yt-dlp', '-P', self.path, '--newline', '--no-playlist'] >> main.py
-          echo cmd += ['-x', '--audio-format', 'mp3'] if self.quality == 'mp3' else ['-f', f'bestvideo[height<={self.quality}]+bestaudio/best'] >> main.py
-          echo p = subprocess.Popen(cmd + [url], stdout=subprocess.PIPE, text=True, encoding='utf-8', errors='ignore') >> main.py
-          echo title="فيديو" >> main.py
-          echo for line in p.stdout: >> main.py
-          echo if '%' in line: >> main.py
-          echo try: self.progress.emit(title, int(float(line.split('%')[0].split()[-1]))) >> main.py
-          echo except: pass >> main.py
-          echo self.finished.emit(title) >> main.py
-          echo class Bridge(QObject): >> main.py
-          echo def __init__(self, w): super().__init__(); self.w=w >> main.py
-          echo @pyqtSlot(str) >> main.py
-          echo def download(self, u): self.w.start_download(u) >> main.py
-          echo class MainWindow(QMainWindow): >> main.py
-          echo def __init__(self): >> main.py
-          echo super().__init__(); self.setWindowTitle("SnapTube KSO v1.3"); self.resize(1000,700) >> main.py
-          echo tabs=QTabWidget(); tabs.setTabPosition(QTabWidget.TabPosition.South); self.setCentralWidget(tabs) >> main.py
-          echo self.b=QWebEngineView(); self.b.setUrl(QUrl("https://www.youtube.com/")); self.b.loadFinished.connect(self.inject); tabs.addTab(self.b,"🏠 الرئيسية") >> main.py
-          echo self.d=QListWidget(); tabs.addTab(self.d,"⬇️ التحميلات") >> main.py
-          echo w=QWidget(); v=QVBoxLayout(w); self.l=QListWidget(); self.ref(); self.l.itemDoubleClicked.connect(lambda i: os.startfile(os.path.join(DOWNLOAD_PATH,i.text()))); btn=QPushButton("📂 فتح الفولدر"); btn.clicked.connect(lambda: os.startfile(DOWNLOAD_PATH)); v.addWidget(self.l); v.addWidget(btn); tabs.addTab(w,"📁 مكتبتي") >> main.py
-          echo c=QWebChannel(); self.br=Bridge(self); c.registerObject('pyBridge',self.br); self.b.page().setWebChannel(c) >> main.py
-          echo def inject(self): >> main.py
-          echo js="new QWebChannel(qt.webChannelTransport,c=>{window.pyBridge=c.objects.pyBridge});setInterval(()=>{let v=document.querySelector('video');if(v&&!document.getElementById('k')){let b=document.createElement('button');b.id='k';b.innerText='⬇️ تحميل';b.style.cssText='position:fixed;bottom:80px;right:15px;z-index:99999;background:#FF0000;color:white;padding:14px 20px;border:none;border-radius:50px;font-size:16px;';b.onclick=()=>pyBridge.download(location.href);document.body.appendChild(b)}},2000);" >> main.py
-          echo self.b.page().runJavaScript(js) >> main.py
-          echo def start_download(self,u): >> main.py
-          echo if 'list=' in u: QMessageBox.warning(self,"تنبيه","حمل الفيديوهات واحد احسن") >> main.py
-          echo else: q,ok=QInputDialog.getItem(self,"الجودة","نزل بجودة ايه؟",[ "720p","1080p","mp3"],0,False); ok and self.run([u],q) >> main.py
-          echo def run(self,urls,q): >> main.py
-          echo self.centralWidget().setCurrentIndex(1) >> main.py
-          echo for u in urls: item=QListWidgetItem("0% - انتظار"); self.d.addItem(item); t=DownloaderThread(u,DOWNLOAD_PATH,q); t.progress.connect(lambda x,y,i=item:i.setText(f"{y}% - {x}")); t.finished.connect(lambda x,i=item:[i.setText(f"✅ تم: {x}"),self.ref()]); t.start() >> main.py
-          echo def ref(self): self.l.clear(); [self.l.addItem(f) for f in sorted(os.listdir(DOWNLOAD_PATH),reverse=True) if f.endswith(('.mp4','.mp3'))] >> main.py
-          echo if __name__=='__main__': app=QApplication(sys.argv); w=MainWindow(); w.show(); sys.exit(app.exec()) >> main.py
-
-      - name: Install
-        run: pip install PyQt6 PyQt6-WebEngine yt-dlp pyinstaller
-
-      - name: Build
-        run: pyinstaller --onefile --noconsole --name "SnapTube-KSO" main.py
-
-      - name: Upload
+          curl -L -o icon.ico https://raw.githubusercontent.com/sandwich1988/icon/main/snaptube.ico || echo "Using default icon"
+          if not exist icon.ico (
+            python -c "from PIL import Image; img = Image.new('RGB', (64,64), color='#2b7a78'); img.save('icon.ico', format='ICO', sizes=[(64,64)])"
+          )
+      
+      - name: إنشاء البرنامج
+        run: |
+          @echo off
+          (
+          echo import customtkinter as ctk
+          echo import yt_dlp, os, threading, tkinter.filedialog as fd
+          echo from tkinter import messagebox
+          echo import webbrowser, datetime, re, sys, ctypes
+          echo ctk.set_appearance_mode("dark")
+          echo ctk.set_default_color_theme("blue")
+          echo app = ctk.CTk()
+          echo app.geometry("900x750")
+          echo app.title("KSO SnapTube - تحميل الفيديوهات والصوت")
+          echo try: app.iconbitmap("icon.ico")
+          echo except: pass
+          echo save_path = os.path.join(os.path.expanduser("~"), "Downloads")
+          echo download_type = "mp3"
+          echo selected_quality = "720p"
+          echo def log(msg, type="info"):
+          echo     ts = datetime.datetime.now().strftime("%H:%M:%S")
+          echo     icons = {"success":"✅","error":"❌","warning":"⚠️","info":"ℹ️"}
+          echo     listbox.insert("end", f"[{ts}] {icons.get(type,'ℹ️')} {msg}")
+          echo     listbox.see("end"); app.update()
+          echo def choose_path():
+          echo     global save_path
+          echo     temp = fd.askdirectory()
+          echo     if temp: save_path = temp; path_label.configure(text=f"📁 مسار التحميل: {save_path}")
+          echo def get_quality(q):
+          echo     return {"144p":"worst[height<=144]","240p":"best[height<=240]","360p":"best[height<=360]","480p":"best[height<=480]","720p":"best[height<=720]","1080p":"best[height<=1080]","4K":"best[height<=2160]"}.get(q,"best[height<=720]")
+          echo def download():
+          echo     url = entry.get().strip()
+          echo     if not url: messagebox.showwarning("تنبيه", "ادخل رابط الفيديو"); return
+          echo     btn.configure(state="disabled", text="⏳ جاري التحميل...")
+          echo     try:
+          echo         if download_type == "mp3":
+          echo             opts = {"format":"bestaudio/best","postprocessors":[{"key":"FFmpegExtractAudio","preferredcodec":"mp3","preferredquality":"320"}],"outtmpl":f"{save_path}/%%(playlist_title)s/%%(title)s.%%(ext)s","progress_hooks":[lambda d: log(f"تحميل: {d.get('_percent_str','')}", "info") if d.get('status')=='downloading' else None]}
+          echo         else:
+          echo             opts = {"format":get_quality(selected_quality),"outtmpl":f"{save_path}/%%(playlist_title)s/%%(title)s.%%(ext)s","progress_hooks":[lambda d: log(f"تحميل: {d.get('_percent_str','')}", "info") if d.get('status')=='downloading' else None]}
+          echo         with yt_dlp.YoutubeDL(opts) as ydl:
+          echo             info = ydl.extract_info(url, download=False)
+          echo             if 'entries' in info:
+          echo                 entries = [e for e in info['entries'] if e]
+          echo                 if entries: log(f"تم العثور على {len(entries)} فيديو", "success")
+          echo                 else: log("⚠️ البلاي ليست فارغة", "warning"); btn.configure(state="normal", text="🚀 ابدأ التحميل"); return
+          echo             else: log("تم العثور على فيديو واحد", "success")
+          echo             ydl.download([url])
+          echo             log("✅ تم التحميل بنجاح", "success")
+          echo             messagebox.showinfo("نجاح", "تم التحميل بنجاح!")
+          echo     except Exception as e:
+          echo         log(f"❌ خطأ: {str(e)}", "error")
+          echo         messagebox.showerror("خطأ", str(e))
+          echo     btn.configure(state="normal", text="🚀 ابدأ التحميل")
+          echo def start(): threading.Thread(target=download, daemon=True).start()
+          echo ctk.CTkLabel(app, text="🎵 KSO SnapTube", font=("Arial", 30, "bold")).pack(pady=15)
+          echo ctk.CTkLabel(app, text="تحميل فيديوهات وصوت من يوتيوب بجودة عالية", font=("Arial", 14)).pack(pady=5)
+          echo f1 = ctk.CTkFrame(app); f1.pack(pady=15, padx=20, fill="x")
+          echo entry = ctk.CTkEntry(f1, placeholder_text="https://youtube.com/... - رابط الفيديو أو البلاي ليست", height=40, font=("Arial", 13))
+          echo entry.pack(side="left", padx=10, pady=10, expand=True, fill="x")
+          echo ctk.CTkButton(app, text="🚀 ابدأ التحميل", command=start, height=50, font=("Arial", 16, "bold"), fg_color="#2b7a78").pack(pady=10, padx=20, fill="x")
+          echo f2 = ctk.CTkFrame(app); f2.pack(pady=10, padx=20, fill="x")
+          echo menu1 = ctk.CTkOptionMenu(f2, values=["MP3 (صوت)", "MP4 (فيديو)"], command=lambda c: (lambda: (quality_menu.configure(state="disabled") if c=="MP3 (صوت)" else quality_menu.configure(state="normal")))(), width=150)
+          echo menu1.pack(side="left", padx=10); menu1.set("MP3 (صوت)")
+          echo quality_menu = ctk.CTkOptionMenu(f2, values=["144p","240p","360p","480p","720p","1080p","4K"], command=lambda c: None, width=120)
+          echo quality_menu.pack(side="left", padx=10); quality_menu.set("720p"); quality_menu.configure(state="disabled")
+          echo ctk.CTkButton(f2, text="📂 اختيار المسار", command=choose_path, width=150).pack(side="left", padx=10)
+          echo ctk.CTkButton(f2, text="📁 فتح المجلد", command=lambda: os.startfile(save_path), width=120).pack(side="left", padx=10)
+          echo path_label = ctk.CTkLabel(app, text=f"📁 مسار التحميل: {save_path}", font=("Arial", 12)); path_label.pack(pady=5)
+          echo listbox = ctk.CTkTextbox(app, height=300, font=("Consolas", 11)); listbox.pack(pady=10, padx=20, fill="both", expand=True)
+          echo ctk.CTkLabel(app, text="KSO SnapTube v2.0 | تحميل بجودة تصل إلى 4K", font=("Arial", 10)).pack(pady=5)
+          echo log("🎵 KSO SnapTube جاهز للتحميل!", "success")
+          echo log("💡 اختر نوع التحميل والجودة", "info")
+          echo app.mainloop()
+          ) > main.py
+      
+      - name: بناء البرنامج
+        run: pyinstaller --onefile --noconsole --name "KSO_SnapTube" --icon=icon.ico --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
+      
+      - name: عمل Installer
+        run: |
+          curl -L -o is.exe https://jrsoftware.org/download.php/is.exe
+          start /wait is.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+          (
+          echo [Setup]
+          echo AppName=KSO SnapTube
+          echo AppVersion=2.0
+          echo DefaultDirName={pf}\KSO SnapTube
+          echo DefaultGroupName=KSO SnapTube
+          echo UninstallDisplayIcon={app}\KSO_SnapTube.exe
+          echo Compression=lzma2
+          echo SolidCompression=yes
+          echo OutputDir=.
+          echo OutputBaseFilename=KSO_SnapTube_Setup
+          echo [Files]
+          echo Source: "dist\KSO_SnapTube.exe"; DestDir: "{app}"
+          echo Source: "icon.ico"; DestDir: "{app}"
+          echo [Icons]
+          echo Name: "{group}\KSO SnapTube"; Filename: "{app}\KSO_SnapTube.exe"; IconFilename: "{app}\icon.ico"
+          echo Name: "{group}\Uninstall KSO SnapTube"; Filename: "{uninstallexe}"
+          echo Name: "{commondesktop}\KSO SnapTube"; Filename: "{app}\KSO_SnapTube.exe"; IconFilename: "{app}\icon.ico"
+          echo [Run]
+          echo Filename: "{app}\KSO_SnapTube.exe"; Description: "تشغيل KSO SnapTube"; Flags: postinstall nowait skipifsilent
+          echo [UninstallDelete]
+          echo Type: filesandordirs; Name: "{app}"
+          ) > installer.iss
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+      
+      - name: رفع الملفات
         uses: actions/upload-artifact@v4
         with:
-          name: SnapTube-KSO.exe
-          path: dist/SnapTube-KSO.exe
+          name: KSO_SnapTube_Installer
+          path: |
+            KSO_SnapTube_Setup.exe
+            dist/KSO_SnapTube.exe
