@@ -11,17 +11,10 @@ jobs:
           python-version: '3.11'
 
       - name: تثبيت FFmpeg
-        run: |
-          choco install ffmpeg -y
-          ffmpeg -version
+        run: choco install ffmpeg -y
 
       - name: تثبيت المتطلبات
         run: pip install yt-dlp[default] customtkinter pillow pyinstaller --upgrade
-
-      - name: تحميل الأيقونة
-        run: |
-          curl -L -o icon.ico https://raw.githubusercontent.com/sandwich1988/icon/main/snaptube.ico
-          if not exist icon.ico echo Favicon failed
 
       - name: إنشاء ملف البرنامج
         run: |
@@ -33,18 +26,11 @@ jobs:
           echo import webbrowser
           echo import datetime
           echo import ctypes
-          echo def is_admin():
-          echo try: return ctypes.windll.shell32.IsUserAnAdmin()
-          echo except: return False
           echo ctk.set_appearance_mode("dark")
           echo ctk.set_default_color_theme("blue")
           echo app = ctk.CTk()
           echo app.geometry("900x750")
           echo app.title("KSO SnapTube - تحميل الفيديوهات والصوت")
-          echo try:
-          echo app.iconbitmap("icon.ico")
-          echo except:
-          echo pass
           echo app.resizable(True, True)
           echo save_path = os.path.join(os.path.expanduser("~"), "Downloads")
           echo download_type = "mp3"
@@ -125,16 +111,10 @@ jobs:
           echo log(f"تم تغيير الجودة إلى: {choice}", "info")
           echo def open_folder():
           echo os.startfile(save_path)
-          echo def open_github():
-          echo webbrowser.open("https://github.com")
           echo title_label = ctk.CTkLabel(app, text="🎵 KSO SnapTube", font=("Arial", 30, "bold"))
           echo title_label.pack(pady=15)
-          echo subtitle_label = ctk.CTkLabel(app, text="تحميل فيديوهات وصوت من يوتيوب بجودة عالية", font=("Arial", 14))
-          echo subtitle_label.pack(pady=5)
-          echo top_frame = ctk.CTkFrame(app)
-          echo top_frame.pack(pady=15, padx=20, fill="x")
-          echo entry = ctk.CTkEntry(top_frame, placeholder_text="https://youtube.com/... - ضع الرابط هنا", width=500, height=40, font=("Arial", 13))
-          echo entry.pack(side="left", padx=10, pady=10, expand=True, fill="x")
+          echo entry = ctk.CTkEntry(app, placeholder_text="https://youtube.com/... - ضع الرابط هنا", width=500, height=40, font=("Arial", 13))
+          echo entry.pack(pady=10, padx=20, fill="x")
           echo btn = ctk.CTkButton(app, text="🚀 ابدأ التحميل", command=start, height=50, font=("Arial", 16, "bold"), fg_color="#2b7a78")
           echo btn.pack(pady=10, padx=20, fill="x")
           echo options_frame = ctk.CTkFrame(app)
@@ -155,15 +135,12 @@ jobs:
           echo path_label.pack(pady=5)
           echo listbox = ctk.CTkTextbox(app, height=300, font=("Consolas", 11))
           echo listbox.pack(pady=10, padx=20, fill="both", expand=True)
-          echo footer_label = ctk.CTkLabel(app, text="KSO SnapTube v2.0 | تحميل بجودة تصل إلى 4K", font=("Arial", 10))
-          echo footer_label.pack(pady=5)
           echo log("🎵 KSO SnapTube جاهز!", "success")
           echo app.mainloop()
           ) > main.py
 
       - name: بناء البرنامج
-        run: |
-          pyinstaller --onefile --noconsole --name "KSO_SnapTube" --icon=icon.ico --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
+        run: pyinstaller --onefile --noconsole --name "KSO_SnapTube" --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
 
       - name: تحميل Inno Setup
         run: |
@@ -177,23 +154,15 @@ jobs:
           echo AppName=KSO SnapTube
           echo AppVersion=2.0
           echo DefaultDirName={pf}\KSO SnapTube
-          echo DefaultGroupName=KSO SnapTube
-          echo UninstallDisplayIcon={app}\KSO_SnapTube.exe
-          echo Compression=lzma2
-          echo SolidCompression=yes
           echo OutputDir=.
           echo OutputBaseFilename=KSO_SnapTube_Setup
           echo [Files]
           echo Source: "dist\KSO_SnapTube.exe"; DestDir: "{app}"
-          echo Source: "icon.ico"; DestDir: "{app}"; Flags: ignoreversion
           echo [Icons]
-          echo Name: "{group}\KSO SnapTube"; Filename: "{app}\KSO_SnapTube.exe"; IconFilename: "{app}\icon.ico"
-          echo Name: "{group}\Uninstall KSO SnapTube"; Filename: "{uninstallexe}"
-          echo Name: "{commondesktop}\KSO SnapTube"; Filename: "{app}\KSO_SnapTube.exe"; IconFilename: "{app}\icon.ico"
+          echo Name: "{group}\KSO SnapTube"; Filename: "{app}\KSO_SnapTube.exe"
+          echo Name: "{commondesktop}\KSO SnapTube"; Filename: "{app}\KSO_SnapTube.exe"
           echo [Run]
           echo Filename: "{app}\KSO_SnapTube.exe"; Description: "تشغيل KSO SnapTube"; Flags: postinstall nowait skipifsilent
-          echo [UninstallDelete]
-          echo Type: filesandordirs; Name: "{app}"
           ) > installer.iss
           "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
 
@@ -201,6 +170,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: KSO_SnapTube_Installer
-          path: |
-            KSO_SnapTube_Setup.exe
-            dist/KSO_SnapTube.exe
+          path: KSO_SnapTube_Setup.exe
