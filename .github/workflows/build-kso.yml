@@ -1,4 +1,4 @@
-name: Build SnapTube KSO v4.1.0 Portable
+name: Build SnapTube KSO v1.0.0 Python
 on:
   workflow_dispatch:
 jobs:
@@ -6,61 +6,107 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v5
       with:
-        node-version: '20'
-    - name: Download yt-dlp
+        python-version: '3.11'
+        
+    - name: Download yt-dlp.exe
+      run: curl -L -o yt-dlp.exe https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe
+      
+    - name: Create main.py
       run: |
-        mkdir bin
-        curl -L -o bin/yt-dlp.exe https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe
-    - name: Create package.json
-      run: |
-        echo { > package.json
-        echo "name": "snaptube-kso", >> package.json
-        echo "version": "4.1.0", >> package.json
-        echo "main": "main.js", >> package.json
-        echo "scripts": { "build": "electron-builder --dir" }, >> package.json
-        echo "devDependencies": { "electron": "^28.3.0", "electron-builder": "^24.13.3" }, >> package.json
-        echo "build": { "appId": "com.kso.snaptube", "productName": "SnapTube KSO", "files": ["main.js","preload.js","index.html"], "extraResources": [{"from":"bin/","to":"bin/"}], "directories": { "output": "dist" }, "nsis": null } >> package.json
-        echo } >> package.json
-    - name: Create main.js
-      run: |
-        echo const {app,BrowserWindow,ipcMain,dialog,shell,BrowserView}=require('electron'); > main.js
-        echo const path=require('path'); >> main.js
-        echo const {spawn,exec}=require('child_process'); >> main.js
-        echo const fs=require('fs'); >> main.js
-        echo let downloadPath=app.getPath('downloads')+'\\SnapTube-KSO'; >> main.js
-        echo if(!fs.existsSync(downloadPath))fs.mkdirSync(downloadPath); >> main.js
-        echo const ytdlpPath=path.join(process.resourcesPath,'bin','yt-dlp.exe'); >> main.js
-        echo let win;let view;let currentTab='browser'; >> main.js
-        echo app.whenReady().then(()=>{ >> main.js
-        echo win=new BrowserWindow({width:1200,height:800,webPreferences:{preload:path.join(__dirname,'preload.js')}}); >> main.js
-        echo view=new BrowserView();win.setBrowserView(view);view.setBounds({x:0,y:60,width:1200,height:740}); >> main.js
-        echo view.webContents.loadURL('https://m.youtube.com'); >> main.js
-        echo view.webContents.session.webRequest.onBeforeRequest((details,cb)=>{if(details.url.includes('ads')||details.url.includes('doubleclick')||details.url.includes('googlesyndication'))cb({cancel:true});else cb({cancel:false}); >> main.js
-        echo view.webContents.on('dom-ready',()=>{view.webContents.executeJavaScript('setInterval(()=>{let v=document.querySelector(\"video\");if(v&&!document.getElementById(\"ksoBtn\")){let b=document.createElement(\"button\");b.id=\"ksoBtn\";b.innerText=\"⬇️ تحميل\";b.style=\"position:fixed;top:10px;left:10px;z-index:999;background:#FF0000;color:white;border:0;padding:10px 15px;border-radius:25px;cursor:pointer;font-size:15px;font-weight:bold;\";b.onclick=()=>window.kso.getPlaylist(window.location.href);document.body.appendChild(b);}},1000);');}); >> main.js
-        echo win.loadFile('index.html'); >> main.js
-        echo win.on('resize',()=>{const [w,h]=win.getContentSize();if(currentTab==='browser'){view.setBounds({x:0,y:60,width:w,height:h-60});}});}); >> main.js
-        echo ipcMain.on('show-browser',()=>{currentTab='browser';view.setBounds({x:0,y:60,width:win.getContentSize()[0],height:win.getContentSize()[1]-60}); >> main.js
-        echo ipcMain.on('hide-browser',()=>{currentTab='downloads';view.setBounds({x:0,y:0,width:0,height:0}); >> main.js
-        echo ipcMain.handle('get-playlist',async(e,url)=>{return new Promise((resolve)=>{exec('\"'+ytdlpPath+'\" --dump-json --flat-playlist --no-download \"'+url+'\"',{maxBuffer:1024*1024*50},(err,stdout)=>{if(err)return resolve([]);const items=stdout.trim().split('\n').filter(Boolean).map(l=>JSON.parse(l));resolve(items.map(i=>({id:i.id,title:i.title})));}); >> main.js
-        echo ipcMain.handle('download-list',(e,items,format)=>{items.forEach(v=>{const args=format==='mp3'?['-x','--audio-format','mp3']:['-f','bestvideo[height<='+format+']+bestaudio/best[height<='+format+']'];const ytdlp=spawn(ytdlpPath,[...args,'-o',downloadPath+'\\%(title)s.%(ext)s','--progress','--newline','https://www.youtube.com/watch?v='+v.id]);ytdlp.stdout.on('data',d=>{const str=d.toString();const match=str.match(/(\d+\.\d+)%/);if(match){win.webContents.send('progress',{id:v.id,progress:match[1]});}});ytdlp.on('close',()=>{win.webContents.send('progress',{id:v.id,status:'تم'});win.webContents.send('rescan-folder');}); >> main.js
-        echo ipcMain.handle('pick-folder',async()=>{const {filePaths}=await dialog.showOpenDialog({properties:['openDirectory'],title:'اختر فولدر التحميل'});if(filePaths[0]){downloadPath=filePaths[0];}return downloadPath;}); >> main.js
-        echo ipcMain.handle('get-files',()=>{try{return fs.readdirSync(downloadPath).filter(f=>f.endsWith('.mp4')||f.endsWith('.mp3')||f.endsWith('.mkv')||f.endsWith('.webm')).map(f=>({name:f,path:path.join(downloadPath,f)}));}catch{return[];}}); >> main.js
-        echo ipcMain.handle('delete-file',(e,p)=>{try{fs.unlinkSync(p);}catch{}}); >> main.js
-        echo ipcMain.handle('open-folder',()=>{shell.openPath(downloadPath);}); >> main.js
-    - name: Create preload.js
-      run: echo const {contextBridge,ipcRenderer}=require('electron');contextBridge.exposeInMainWorld('kso',{getPlaylist:(url)=>ipcRenderer.invoke('get-playlist',url),downloadList:(items,format)=>ipcRenderer.invoke('download-list',items,format),pickFolder:()=>ipcRenderer.invoke('pick-folder'),getFiles:()=>ipcRenderer.invoke('get-files'),deleteFile:(p)=>ipcRenderer.invoke('delete-file',p),openFolder:()=>ipcRenderer.invoke('open-folder'),onProgress:(cb)=>ipcRenderer.on('progress',(_,data)=>cb(data)),onRescan:(cb)=>ipcRenderer.on('rescan-folder',()=>cb()),showBrowser:()=>ipcRenderer.send('show-browser'),hideBrowser:()=>ipcRenderer.send('hide-browser')}); > preload.js
-    - name: Create index.html
-      run: echo ^<html dir="rtl" lang="ar"^>^<head^>^<meta charset="UTF-8"^>^<style^>body{background:#0f0f0f;color:#fff;font-family:Arial;margin:0;overflow:hidden;}.header{display:flex;background:#FF0000;padding:10px;gap:10px;align-items:center;height:60px;}.header button{background:#0003;border:0;color:white;padding:8px;border-radius:20px;cursor:pointer;}.card{background:#1e1e1e;padding:12px;margin:10px 0;border-radius:12px;display:flex;justify-content:space-between;}^</style^>^</head^>^<body^>^<div class="header"^>^<b^>SnapTube KSO^</b^>^<button onclick="showTab('browser')"^>🏠^</button^>^<button onclick="showTab('downloads')"^>📁^</button^>^<button onclick="kso.pickFolder().then(p=^>document.getElementById('path').innerText=p.split('\\').pop())"^>مسار^</button^>^<span id="path"^>^</span^>^</div^>^<div id="downloads" style="display:none;padding:15px;"^>^<h3^>مكتبتي^</h3^>^<button onclick="kso.openFolder()"^>فتح الفولدر^</button^>^<div id="list"^>^</div^>^</div^>^<div id="popup" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000c;"^>^<div style="background:#1a1a1a;margin:5% auto;padding:20px;width:90%;"^>^<h3^>اختيار الفيديوهات^</h3^>^<select id="format"^>^<option value="720"^>720p^</option^>^<option value="mp3"^>MP3^</option^>^</select^>^<div id="plist"^>^</div^>^<button onclick="startDownload()"^>تحميل^</button^>^<button onclick="document.getElementById('popup').style.display='none'"^>الغاء^</button^>^</div^>^</div^>^<script^>let currentItems=[];function showTab(tab){if(tab==='browser'){document.getElementById('downloads').style.display='none';kso.showBrowser();}else{document.getElementById('downloads').style.display='block';kso.hideBrowser();loadFiles();}}async function loadFiles(){const files=await kso.getFiles();document.getElementById('list').innerHTML=files.length?files.map(f=^>`^<div class="card"^>^<div^>${f.name}^</div^>^<button onclick="kso.deleteFile('${f.path.replace(/'/g,"\\'")}').then(loadFiles)"^>حذف^</button^>^</div^>`^).join(''):'فاضي';}kso.onRescan(()=>{if(document.getElementById('downloads').style.display==='block')loadFiles();});window.kso.getPlaylist=async(url)=>{const items=await kso.getPlaylist(url);if(items.length===0){let vid=url.split('v=')[1]?.split('&')[0];if(vid){kso.downloadList([{id:vid}],document.getElementById('format').value);return;}}currentItems=items;document.getElementById('plist').innerHTML=items.map((i,idx)=^>`^<div^>^<input type="checkbox" id="c${idx}" checked^>^<label for="c${idx}"^>${i.title}^</label^>^</div^>`^).join('');document.getElementById('popup').style.display='block';};function startDownload(){const selected=currentItems.filter((_,idx)=^>document.getElementById('c'+idx).checked);kso.downloadList(selected,document.getElementById('format').value);document.getElementById('popup').style.display='none';}^</script^>^</body^>^</html^> > index.html
+        echo import sys, os, json, subprocess, threading, re > main.py
+        echo from PyQt5.QtWidgets import * >> main.py
+        echo from PyQt5.QtCore import * >> main.py
+        echo from PyQt5.QtWebEngineWidgets import QWebEngineView >> main.py
+        echo from PyQt5.QtWebChannel import QWebChannel >> main.py
+        echo DOWNLOAD_PATH = os.path.join(os.path.expanduser("~"), "Downloads", "SnapTube-KSO") >> main.py
+        echo os.makedirs(DOWNLOAD_PATH, exist_ok=True) >> main.py
+        echo YTDLP = "yt-dlp.exe" >> main.py
+        echo class Bridge(QObject): >> main.py
+        echo     @pyqtSlot(str, result=str) >> main.py
+        echo     def getPlaylist(self, url): >> main.py
+        echo         try: >> main.py
+        echo             cmd = [YTDLP, '--dump-json', '--flat-playlist', '--no-download', url] >> main.py
+        echo             res = subprocess.check_output(cmd, stderr=subprocess.DEVNULL, text=True, encoding='utf-8') >> main.py
+        echo             items = [json.loads(l) for l in res.strip().split('\n') if l] >> main.py
+        echo             return json.dumps([{'id':i['id'],'title':i['title']} for i in items]) >> main.py
+        echo         except: >> main.py
+        echo             vid = re.search(r'v=([a-zA-Z0-9_-]{11})', url) >> main.py
+        echo             if vid: return json.dumps([{'id':vid.group(1),'title':'فيديو واحد'}]) >> main.py
+        echo             return '[]' >> main.py
+        echo     @pyqtSlot(str, str) >> main.py
+        echo     def downloadList(self, items_json, format): >> main.py
+        echo         items = json.loads(items_json) >> main.py
+        echo         for v in items: >> main.py
+        echo             args = [YTDLP, '-o', os.path.join(DOWNLOAD_PATH, '%%(title)s.%%(ext)s'), '--newline'] >> main.py
+        echo             if format == 'mp3': args += ['-x', '--audio-format', 'mp3'] >> main.py
+        echo             else: args += ['-f', f'bestvideo[height<={format}]+bestaudio/best[height<={format}]'] >> main.py
+        echo             args.append(f"https://www.youtube.com/watch?v={v['id']}") >> main.py
+        echo             threading.Thread(target=subprocess.Popen, args=(args,)).start() >> main.py
+        echo     @pyqtSlot(result=str) >> main.py
+        echo     def getFiles(self): >> main.py
+        echo         try: >> main.py
+        echo             files = [f for f in os.listdir(DOWNLOAD_PATH) if f.endswith(('%%.mp4','%%.mp3','%%.mkv','%%.webm'))] >> main.py
+        echo             return json.dumps([{'name':f, 'path':os.path.join(DOWNLOAD_PATH,f)} for f in files]) >> main.py
+        echo         except: return '[]' >> main.py
+        echo     @pyqtSlot(str) >> main.py
+        echo     def deleteFile(self, path):  >> main.py
+        echo         try: os.remove(path) >> main.py
+        echo         except: pass >> main.py
+        echo     @pyqtSlot() >> main.py
+        echo     def openFolder(self):  >> main.py
+        echo         os.startfile(DOWNLOAD_PATH) >> main.py
+        echo class Main(QMainWindow): >> main.py
+        echo     def __init__(self): >> main.py
+        echo         super().__init__() >> main.py
+        echo         self.setWindowTitle("SnapTube KSO v1.0.0") >> main.py
+        echo         self.resize(1200, 800) >> main.py
+        echo         self.tabs = QTabWidget() >> main.py
+        echo         self.setCentralWidget(self.tabs) >> main.py
+        echo         self.browser = QWebEngineView() >> main.py
+        echo         self.browser.load(QUrl("https://m.youtube.com")) >> main.py
+        echo         self.tabs.addTab(self.browser, "🏠 المتصفح") >> main.py
+        echo         channel = QWebChannel() >> main.py
+        echo         self.bridge = Bridge() >> main.py
+        echo         channel.registerObject("kso", self.bridge) >> main.py
+        echo         self.browser.page().setWebChannel(channel) >> main.py
+        echo         js = "new QWebChannel(qt.webChannelTransport, function(channel) {window.kso = channel.objects.kso;setInterval(()=>{let v=document.querySelector('video');if(v&&!document.getElementById('ksoBtn')){let b=document.createElement('button');b.id='ksoBtn';b.innerText='⬇️ تحميل';b.style='position:fixed;top:10px;left:10px;z-index:999;background:#FF0000;color:white;border:0;padding:10px 15px;border-radius:25px;cursor:pointer;font-size:15px;font-weight:bold;';b.onclick=()=>{kso.getPlaylist(window.location.href, function(res){let items = JSON.parse(res);let html = '<select id=ksoFormat><option value=720>720p</option><option value=mp3>MP3</option></select><br>';items.forEach((i,idx)=>{html+=`<input type=checkbox id=c${idx} checked><label for=c${idx}>${i.title}</label><br>`});html+='<button onclick=doDl()>تحميل</button>';let d=document.createElement('div');d.id='ksoPop';d.style='position:fixed;top:10%;left:10%;width:80%;background:#222;padding:20px;z-index:999;color:white;max-height:80%;overflow:auto;';d.innerHTML=html;document.body.appendChild(d);window.ksoItems = items;window.doDl = ()=>{let selected = window.ksoItems.filter((_,idx)=>document.getElementById('c'+idx).checked);kso.downloadList(JSON.stringify(selected), document.getElementById('ksoFormat').value);document.getElementById('ksoPop').remove();}});};document.body.appendChild(b);}},1000);});" >> main.py
+        echo         self.browser.page().runJavaScript(js) >> main.py
+        echo         lib = QWidget() >> main.py
+        echo         v = QVBoxLayout(lib) >> main.py
+        echo         btn = QPushButton("فتح الفولدر") >> main.py
+        echo         btn.clicked.connect(self.bridge.openFolder) >> main.py
+        echo         v.addWidget(btn) >> main.py
+        echo         self.list = QListWidget() >> main.py
+        echo         v.addWidget(self.list) >> main.py
+        echo         self.tabs.addTab(lib, "📁 مكتبتي") >> main.py
+        echo         self.tabs.currentChanged.connect(self.loadFiles) >> main.py
+        echo     def loadFiles(self, idx): >> main.py
+        echo         if idx==1: >> main.py
+        echo             self.list.clear() >> main.py
+        echo             files = json.loads(self.bridge.getFiles()) >> main.py
+        echo             for f in files: >> main.py
+        echo                 item = QListWidgetItem(f['name']) >> main.py
+        echo                 item.setData(Qt.UserRole, f['path']) >> main.py
+        echo                 self.list.addItem(item) >> main.py
+        echo             self.list.itemDoubleClicked.connect(lambda i: os.startfile(i.data(Qt.UserRole))) >> main.py
+        echo if __name__ == '__main__': >> main.py
+        echo     app = QApplication(sys.argv) >> main.py
+        echo     w = Main() >> main.py
+        echo     w.show() >> main.py
+        echo     sys.exit(app.exec_()) >> main.py
+        
     - name: Install
-      run: npm install
-    - name: Build Portable
-      run: npm run build
-    - name: Zip Portable
-      run: Compress-Archive -Path dist/win-unpacked/* -DestinationPath SnapTube-KSO-v4.1.0-Portable.zip
-    - name: Upload
+      run: pip install PyQt5 PyQtWebEngine pyinstaller
+      
+    - name: Build EXE
+      run: pyinstaller --onefile --windowed --name "SnapTube KSO" --add-data "yt-dlp.exe;." main.py
+      
+    - name: Upload EXE
       uses: actions/upload-artifact@v4
       with:
-        name: SnapTube-KSO-v4.1.0
-        path: SnapTube-KSO-v4.1.0-Portable.zip
+        name: SnapTube-KSO-v1.0.0-Windows
+        path: dist/SnapTube KSO.exe
