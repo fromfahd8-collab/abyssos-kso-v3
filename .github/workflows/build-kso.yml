@@ -12,21 +12,24 @@ jobs:
         with: { node-version: '20' }
 
       - name: Download yt-dlp
-        run: Invoke-WebRequest -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" -OutFile "yt-dlp.exe"
+        run: |
+          mkdir bin
+          Invoke-WebRequest -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" -OutFile "bin/yt-dlp.exe"
 
       - name: Create All Files
         run: |
           @"
           {
             "name": "snaptube-kso",
-            "version": "1.1.1",
+            "version": "1.1.2",
             "main": "main.js",
             "scripts": { "build": "electron-builder --win" },
-            "devDependencies": { "electron": "^31.0.0", "electron-builder": "^24.13.3" },
+            "devDependencies": { "electron": "^30.0.0", "electron-builder": "^24.13.3" },
             "build": { 
               "appId": "com.kso.snaptube", 
               "publish": "never",
-              "files": ["**/*", "yt-dlp.exe"],
+              "files": ["**/*"],
+              "extraResources": [{"from": "bin/", "to": "bin/"}],
               "win": { "target": "nsis", "artifactName": "SnapTube-KSO-v1.1-Setup.exe" } 
             }
           }
@@ -38,6 +41,7 @@ jobs:
           
           let downloadPath = app.getPath('downloads') + '\\SnapTube-KSO';
           if(!fs.existsSync(downloadPath)) fs.mkdirSync(downloadPath);
+          const ytdlpPath = path.join(process.resourcesPath, 'bin', 'yt-dlp.exe');
           let win; let view; let currentTab = 'browser';
 
           app.whenReady().then(() => {
@@ -53,12 +57,11 @@ jobs:
               view.webContents.executeJavaScript(` setInterval(()=>{ let v = document.querySelector('video'); if(v &&!document.getElementById('ksoBtn')){ let b = document.createElement('button'); b.id='ksoBtn'; b.innerText='⬇️ [KSO]'; b.style='position:fixed;top:10px;right:10px;z-index:999;background:#FF0000;color:white;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:14px;'; b.onclick=()=>window.kso.download(window.location.href); document.body.appendChild(b); } },1000); `);
             });
             win.loadFile('index.html');
-
             win.on('resize', () => { const [w, h] = win.getContentSize(); if(currentTab==='browser'){ view.setBounds({ x: 0, y: 50, width: w, height: h-50 }); } });
           });
 
           ipcMain.on('show-browser', ()=>{ currentTab='browser'; view.setBounds({ x: 0, y: 50, width: win.getContentSize()[0], height: win.getContentSize()[1]-50 });
-          ipcMain.on('hide-browser', ()=>{ currentTab='downloads'; view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+          ipcMain.on('hide-browser', ()=>{ currentTab='downloads'; view.setBounds({ x: 0, y: 0, width: 0, height: 0 }); });
 
           ipcMain.handle('pick-folder', async () => {
             const { filePaths } = await dialog.showOpenDialog({properties: ['openDirectory']});
@@ -68,7 +71,7 @@ jobs:
 
           ipcMain.handle('download', (e, url) => {
             const id = Date.now().toString();
-            const ytdlp = spawn('yt-dlp.exe', ['-o', `${downloadPath}\\%(title)s.%(ext)s`, '--progress', '--newline', url]);
+            const ytdlp = spawn(ytdlpPath, ['-o', `${downloadPath}\\%(title)s.%(ext)s`, '--progress', '--newline', url]);
             ytdlp.stdout.on('data', d => { const str = d.toString(); const match = str.match(/(\d+\.\d+)%/); if(match){ win.webContents.send('progress', {id, progress: match[1]}); } });
             ytdlp.on('close', () => { win.webContents.send('progress', {id, status: 'تم'}); win.webContents.send('rescan-folder'); });
             return id;
