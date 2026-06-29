@@ -8,7 +8,6 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
 
@@ -26,6 +25,7 @@ jobs:
             "devDependencies": { "electron": "^31.0.0", "electron-builder": "^24.13.3" },
             "build": { 
               "appId": "com.kso.snaptube", 
+              "publish": "never",
               "files": ["**/*", "yt-dlp.exe"],
               "win": { "target": "nsis", "artifactName": "SnapTube-KSO-v1.1-Setup.exe" } 
             }
