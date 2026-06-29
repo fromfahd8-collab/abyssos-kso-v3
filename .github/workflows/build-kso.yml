@@ -17,14 +17,12 @@ jobs:
         run: |
           pip install yt-dlp customtkinter pillow
           pip install pyinstaller --upgrade
-          pip install websockets --upgrade  # مهم جداً
+          pip install websockets --upgrade
 
       - name: تحضير الأيقونة
         run: |
           curl -L -o icon.ico https://raw.githubusercontent.com/sandwich1988/icon/main/snaptube.ico
-          if (!(Test-Path icon.ico)) { 
-              python -c "from PIL import Image; img = Image.new('RGB', (64,64), color='#2b7a78'); img.save('icon.ico', format='ICO', sizes=[(64,64)])" 
-          }
+          if (!(Test-Path icon.ico)) { python -c "from PIL import Image; Image.new('RGB', (64,64), color='#2b7a78').save('icon.ico', format='ICO', sizes=[(64,64)])" }
         shell: pwsh
 
       - name: إنشاء ملف main.py
@@ -179,73 +177,9 @@ jobs:
           '@ | Out-File -FilePath main.py -Encoding utf8
         shell: pwsh
 
-      - name: إنشاء ملف spec لـ PyInstaller
+      - name: بناء البرنامج (الحل السحري النهائي)
         run: |
-          @"
-          # -*- mode: python ; coding: utf-8 -*-
-
-          a = Analysis(
-              ['main.py'],
-              pathex=[],
-              binaries=[],
-              datas=[],
-              hiddenimports=[
-                  'yt_dlp',
-                  'yt_dlp.extractor',
-                  'yt_dlp.downloader',
-                  'yt_dlp.postprocessor',
-                  'websockets',
-                  'websockets.legacy',
-                  'websockets.asyncio',
-                  'brotli',
-                  'mutagen',
-                  'pycryptodome'
-              ],
-              hookspath=[],
-              hooksconfig={},
-              runtime_hooks=[],
-              excludes=[
-                  'matplotlib',
-                  'numpy',
-                  'pandas',
-                  'scipy',
-                  'PyQt5',
-                  'PyQt6',
-                  'tensorflow',
-                  'torch'
-              ],
-              noarchive=False,
-              optimize=0,
-          )
-
-          pyz = PYZ(a.pure)
-
-          exe = EXE(
-              pyz,
-              a.scripts,
-              a.binaries,
-              a.datas,
-              [],
-              name='KSO_SnapTube',
-              debug=False,
-              bootloader_ignore_signals=False,
-              strip=False,
-              upx=True,
-              upx_exclude=[],
-              runtime_tmpdir=None,
-              console=False,
-              icon='icon.ico',
-              disable_windowed_traceback=False,
-              argv_emulation=False,
-              target_arch=None,
-              codesign_identity=None,
-              entitlements_file=None,
-          )
-          "@ | Out-File -FilePath main.spec -Encoding utf8
-        shell: pwsh
-
-      - name: بناء البرنامج باستخدام PyInstaller (مع spec)
-        run: pyinstaller main.spec
+          pyinstaller --onefile --noconsole --name "KSO_SnapTube" --icon=icon.ico --collect-all yt_dlp --collect-all websockets --hidden-import=websockets --hidden-import=websockets.legacy --hidden-import=websockets.asyncio --hidden-import=websockets.asyncio.client --hidden-import=websockets.asyncio.compatibility --hidden-import=websockets.asyncio.connection --hidden-import=websockets.asyncio.messages --hidden-import=websockets.asyncio.router --hidden-import=websockets.asyncio.server --hidden-import=websockets.auth --hidden-import=websockets.cli --hidden-import=websockets.client --hidden-import=websockets.connection --hidden-import=websockets.datastructures --hidden-import=websockets.exceptions --hidden-import=websockets.extensions --hidden-import=websockets.extensions.base --hidden-import=websockets.extensions.permessage_deflate --hidden-import=websockets.frames --hidden-import=websockets.headers --hidden-import=websockets.http --hidden-import=websockets.http11 --hidden-import=websockets.imports --hidden-import=websockets.legacy.auth --hidden-import=websockets.legacy.client --hidden-import=websockets.legacy.exceptions --hidden-import=websockets.legacy.framing --hidden-import=websockets.legacy.handshake --hidden-import=websockets.legacy.http --hidden-import=websockets.legacy.protocol --hidden-import=websockets.legacy.server --hidden-import=websockets.protocol --hidden-import=websockets.server --hidden-import=websockets.speedups --hidden-import=websockets.streams --hidden-import=websockets.sync --hidden-import=websockets.sync.client --hidden-import=websockets.sync.connection --hidden-import=websockets.sync.messages --hidden-import=websockets.sync.server --hidden-import=websockets.typing --hidden-import=websockets.uri --hidden-import=websockets.utils --hidden-import=websockets.version --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
 
       - name: عمل Installer
         run: |
