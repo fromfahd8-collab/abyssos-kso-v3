@@ -8,7 +8,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'   # إصدار مستقر
+          python-version: '3.10'
 
       - name: تثبيت FFmpeg
         run: choco install ffmpeg -y
@@ -17,7 +17,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install yt-dlp customtkinter pillow
-          pip install websockets   # تثبيت صريح
+          pip install websockets
           pip install pyinstaller
 
       - name: إنشاء ملف main.py
@@ -177,9 +177,16 @@ jobs:
           if (!(Test-Path icon.ico)) { python -c "from PIL import Image; Image.new('RGB', (64,64), color='#2b7a78').save('icon.ico', format='ICO', sizes=[(64,64)])" }
         shell: pwsh
 
-      - name: بناء البرنامج (طريقة الـ folder)
+      - name: الحصول على مسار site-packages
+        id: site
         run: |
-          pyinstaller --onedir --noconsole --name "KSO_SnapTube" --icon=icon.ico --collect-all yt_dlp --collect-all websockets --hidden-import=websockets --hidden-import=yt_dlp --add-data "icon.ico;." main.py
+          $path = python -c "import site; print(site.getsitepackages()[0])"
+          echo "SITE_PACKAGES=$path" >> $env:GITHUB_ENV
+        shell: pwsh
+
+      - name: بناء البرنامج (الحل النهائي)
+        run: |
+          pyinstaller --onedir --noconsole --name "KSO_SnapTube" --icon=icon.ico --add-data "$env:SITE_PACKAGES\websockets;websockets" --paths "$env:SITE_PACKAGES" --collect-all yt_dlp --collect-all websockets --hidden-import=websockets --hidden-import=websockets.legacy --hidden-import=websockets.asyncio --hidden-import=websockets.asyncio.client --hidden-import=websockets.asyncio.compatibility --hidden-import=websockets.asyncio.connection --hidden-import=websockets.asyncio.messages --hidden-import=websockets.asyncio.router --hidden-import=websockets.asyncio.server --hidden-import=websockets.auth --hidden-import=websockets.cli --hidden-import=websockets.client --hidden-import=websockets.connection --hidden-import=websockets.datastructures --hidden-import=websockets.exceptions --hidden-import=websockets.extensions --hidden-import=websockets.extensions.base --hidden-import=websockets.extensions.permessage_deflate --hidden-import=websockets.frames --hidden-import=websockets.headers --hidden-import=websockets.http --hidden-import=websockets.http11 --hidden-import=websockets.imports --hidden-import=websockets.legacy.auth --hidden-import=websockets.legacy.client --hidden-import=websockets.legacy.exceptions --hidden-import=websockets.legacy.framing --hidden-import=websockets.legacy.handshake --hidden-import=websockets.legacy.http --hidden-import=websockets.legacy.protocol --hidden-import=websockets.legacy.server --hidden-import=websockets.protocol --hidden-import=websockets.server --hidden-import=websockets.speedups --hidden-import=websockets.streams --hidden-import=websockets.sync --hidden-import=websockets.sync.client --hidden-import=websockets.sync.connection --hidden-import=websockets.sync.messages --hidden-import=websockets.sync.server --hidden-import=websockets.typing --hidden-import=websockets.uri --hidden-import=websockets.utils --hidden-import=websockets.version --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
 
       - name: ضغط المجلد إلى ZIP
         run: Compress-Archive -Path dist/KSO_SnapTube/* -DestinationPath KSO_SnapTube.zip -Force
