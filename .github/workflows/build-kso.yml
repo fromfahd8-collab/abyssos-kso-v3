@@ -4,13 +4,9 @@ on: [push]
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with: {python-version: '3.11'}
 
       - name: Create main.py
@@ -28,7 +24,7 @@ jobs:
           class DownloaderThread(QThread):
               progress = pyqtSignal(str, int); finished = pyqtSignal(str)
               def __init__(self, urls, path, quality):
-                  super().__init__(); self.urls = urls if isinstance(urls, list) else ; self.path = path; self.quality = quality
+                  super().__init__(); self.urls = urls if isinstance(urls, list) else [urls]; self.path = path; self.quality = quality
               def run(self):
                   for url in self.urls:
                       cmd = ['yt-dlp', '-P', self.path, '--newline', '--no-playlist']
@@ -59,7 +55,7 @@ jobs:
 
           class MainWindow(QMainWindow):
               def __init__(self):
-                  super().__init__(); self.setWindowTitle("سناب تيوب كسو v1.0.5"); self.resize(1000, 700)
+                  super().__init__(); self.setWindowTitle("سناب تيوب كسو v1.0.6"); self.resize(1000, 700)
                   tabs = QTabWidget(); tabs.setTabPosition(QTabWidget.TabPosition.South); self.setCentralWidget(tabs)
                   self.browser = QWebEngineView(); self.browser.setUrl(QUrl("https://m.youtube.com/")); self.browser.loadFinished.connect(self.inject_downloader); tabs.addTab(self.browser, "🏠 رئيسية")
                   self.download_list = QListWidget(); tabs.addTab(self.download_list, "⬇️ التحميلات")
