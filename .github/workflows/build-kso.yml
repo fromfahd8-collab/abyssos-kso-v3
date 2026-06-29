@@ -1,41 +1,55 @@
-name: Build SnapTube EXE
-on: [push]
+name: Build SnapTube KSO
+on:
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: '3.11'}
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: 'x64'
 
       - name: Create main.py
+        shell: pwsh
         run: |
-          @"
-          import sys, os, subprocess, json
+          $code = @"
+          import sys, os, subprocess, json, re
           from PyQt6.QtWidgets import *
           from PyQt6.QtWebEngineWidgets import QWebEngineView
-          from PyQt6.QtCore import QUrl, QThread, pyqtSignal, QObject, Qt, pyqtSlot
+          from PyQt6.QtCore import QUrl, QThread, pyqtSignal, QObject, pyqtSlot
           from PyQt6.QtWebChannel import QWebChannel
 
           DOWNLOAD_PATH = os.path.join(os.path.expanduser('~'), 'Downloads', 'SnapTube-KSO')
           os.makedirs(DOWNLOAD_PATH, exist_ok=True)
 
           class DownloaderThread(QThread):
-              progress = pyqtSignal(str, int); finished = pyqtSignal(str)
+              progress = pyqtSignal(str, int)
+              finished = pyqtSignal(str)
               def __init__(self, urls, path, quality):
-                  super().__init__(); self.urls = urls if isinstance(urls, list) else ; self.path = path; self.quality = quality
+                  super().__init__()
+                  self.urls = urls if isinstance(urls, list) else [urls]
+                  self.path = path
+                  self.quality = quality
               def run(self):
                   for url in self.urls:
-                      cmd = ['yt-dlp', '-P', self.path, '--newline', '--no-playlist']
-                      cmd += ['-x', '--audio-format', 'mp3'] if self.quality == 'mp3' else ['-f', f'bestvideo[height<={self.quality}]+bestaudio/best']
+                      cmd = ['yt-dlp', '-P', self.path, '--newline', '--no-playlist', '--no-warnings']
+                      if self.quality == 'mp3':
+                          cmd += ['-x', '--audio-format', 'mp3', '--audio-quality', '0']
+                      else:
+                          cmd += ['-f', f'bestvideo[height<={self.quality}]+bestaudio/best']
                       process = subprocess.Popen(cmd + [url], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='ignore')
                       title = "فيديو"
                       for line in process.stdout:
-                          if '[download]' in line and '%' in line:
-                              try: self.progress.emit(title, int(float(line.split('%')[0].split()[-1])))
-                              except: pass
-                          if 'Downloading ' in line: title = line.split('Downloading ')[-1].strip()[:40]
+                          m = re.search(r'Downloading video (.+)', line)
+                          if m: title = m.group(1)[:50]
+                          m = re.search(r'(\d+\.\d+)%', line)
+                          if m: self.progress.emit(title, int(float(m.group(1))))
                       self.finished.emit(title)
 
           class Bridge(QObject):
@@ -45,55 +59,129 @@ jobs:
 
           class PlaylistDialog(QDialog):
               def __init__(self, videos, parent=None):
-                  super().__init__(parent); self.setWindowTitle("اختار من البلاي ليست"); self.resize(500, 400)
-                  layout = QVBoxLayout(self); scroll = QScrollArea(); scroll.setWidgetResizable(True); w = QWidget(); v = QVBoxLayout(w); self.checkboxes = []
-                  for v_data in videos: cb = QCheckBox(f"{v_data['title'][:60]}"); cb.setChecked(True); cb.url = f"https://www.youtube.com/watch?v={v_data['id']}"; v.addWidget(cb); self.checkboxes.append(cb)
+                  super().__init__(parent)
+                  self.setWindowTitle("اختار من البلاي ليست")
+                  self.resize(500, 400)
+                  layout = QVBoxLayout(self)
+                  scroll = QScrollArea(); scroll.setWidgetResizable(True)
+                  w = QWidget(); v = QVBoxLayout(w); self.checkboxes = []
+                  for v_data in videos:
+                      cb = QCheckBox(f"{v_data['title'][:60]}")
+                      cb.setChecked(True)
+                      cb.url = f"https://www.youtube.com/watch?v={v_data['id']}"
+                      v.addWidget(cb); self.checkboxes.append(cb)
                   scroll.setWidget(w); layout.addWidget(scroll)
-                  h = QHBoxLayout(); h.addWidget(QLabel("الجودة:")); self.quality_box = QComboBox(); self.quality_box.addItems(["720p", "1080p", "mp3"]); h.addWidget(self.quality_box); layout.addLayout(h)
+                  h = QHBoxLayout(); h.addWidget(QLabel("الجودة:"))
+                  self.quality_box = QComboBox(); self.quality_box.addItems(["720p", "1080p", "mp3"])
+                  h.addWidget(self.quality_box); layout.addLayout(h)
                   btn = QPushButton("ابدأ التحميل"); btn.clicked.connect(self.accept); layout.addWidget(btn)
               def get_selected(self): return [cb.url for cb in self.checkboxes if cb.isChecked()], self.quality_box.currentText()
 
           class MainWindow(QMainWindow):
               def __init__(self):
-                  super().__init__(); self.setWindowTitle("SnapTube KSO v1.0.9"); self.resize(1000, 700)
-                  tabs = QTabWidget(); tabs.setTabPosition(QTabWidget.TabPosition.South); self.setCentralWidget(tabs)
-                  self.browser = QWebEngineView(); self.browser.setUrl(QUrl("https://www.youtube.com/")); self.browser.loadFinished.connect(self.inject_downloader); tabs.addTab(self.browser, "🏠 الرئيسية")
-                  self.download_list = QListWidget(); tabs.addTab(self.download_list, "⬇️ التحميلات")
-                  lib_widget = QWidget(); lib_layout = QVBoxLayout(lib_widget); self.list_files = QListWidget(); self.refresh_library(); self.list_files.itemDoubleClicked.connect(lambda item: os.startfile(os.path.join(DOWNLOAD_PATH, item.text()))); btn_open = QPushButton("فتح الفولدر"); btn_open.clicked.connect(lambda: os.startfile(DOWNLOAD_PATH)); lib_layout.addWidget(self.list_files); lib_layout.addWidget(btn_open); tabs.addTab(lib_widget, "📁 مكتبتي")
-                  self.channel = QWebChannel(); self.bridge = Bridge(self); self.channel.registerObject('pyBridge', self.bridge); self.browser.page().setWebChannel(self.channel)
+                  super().__init__()
+                  self.setWindowTitle("SnapTube KSO v1.2.0")
+                  self.resize(1200, 800)
+                  tabs = QTabWidget()
+                  tabs.setTabPosition(QTabWidget.TabPosition.South)
+                  self.setCentralWidget(tabs)
+                  
+                  self.browser = QWebEngineView()
+                  self.browser.setUrl(QUrl("https://www.youtube.com/"))
+                  self.browser.loadFinished.connect(self.inject_downloader)
+                  tabs.addTab(self.browser, "🏠 الرئيسية")
+                  
+                  self.download_list = QListWidget()
+                  tabs.addTab(self.download_list, "⬇️ التحميلات")
+                  
+                  lib_widget = QWidget(); lib_layout = QVBoxLayout(lib_widget)
+                  self.list_files = QListWidget()
+                  self.refresh_library()
+                  self.list_files.itemDoubleClicked.connect(lambda item: os.startfile(os.path.join(DOWNLOAD_PATH, item.text())))
+                  btn_open = QPushButton("📂 فتح فولدر التحميلات")
+                  btn_open.clicked.connect(lambda: os.startfile(DOWNLOAD_PATH))
+                  lib_layout.addWidget(self.list_files); lib_layout.addWidget(btn_open)
+                  tabs.addTab(lib_widget, "📁 مكتبتي")
+                  
+                  self.channel = QWebChannel()
+                  self.bridge = Bridge(self)
+                  self.channel.registerObject('pyBridge', self.bridge)
+                  self.browser.page().setWebChannel(self.channel)
+
               def inject_downloader(self):
-                  js = """new QWebChannel(qt.webChannelTransport, c=>{window.pyBridge=c.objects.pyBridge});setInterval(()=>{let v=document.querySelector('video');if(v&&!document.getElementById('ksoBtn')){let b=document.createElement('button');b.id='ksoBtn';b.innerText='⬇️ تحميل';b.style.cssText='position:fixed;bottom:80px;right:15px;z-index:99999;background:#FF0000;color:white;padding:14px 20px;border:none;border-radius:50px;font-size:16px;font-weight:bold;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.3);';b.onclick=()=>window.pyBridge.download(location.href);document.body.appendChild(b)}},1500);"""
+                  js = """
+                  new QWebChannel(qt.webChannelTransport, function(c) {
+                    window.pyBridge = c.objects.pyBridge;
+                    function addBtn() {
+                      let v = document.querySelector('video');
+                      if(v && !document.getElementById('ksoBtn')) {
+                        let b = document.createElement('button');
+                        b.id = 'ksoBtn'; b.innerText = '⬇️ تحميل';
+                        b.style.cssText = 'position:fixed;bottom:80px;right:15px;z-index:99999;background:#FF0000;color:white;padding:14px 20px;border:none;border-radius:50px;font-size:16px;font-weight:bold;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,0.3);';
+                        b.onclick = () => window.pyBridge.download(location.href);
+                        document.body.appendChild(b);
+                      }
+                    }
+                    setInterval(addBtn, 2000);
+                  });
+                  """
                   self.browser.page().runJavaScript(js)
+
               def start_download(self, url):
-                  if 'list=' in url: self.handle_playlist(url)
-                  else: q, ok = QInputDialog.getItem(self, "الجودة", "نزل بجودة ايه؟", ["720p", "1080p", "mp3"], 0, False); ok and self.run_download([url], q)
+                  if 'list=' in url:
+                      self.handle_playlist(url)
+                  else:
+                      q, ok = QInputDialog.getItem(self, "الجودة", "نزل بجودة ايه؟", ["720p", "1080p", "mp3"], 0, False)
+                      if ok: self.run_download(url, q)
+
               def handle_playlist(self, url):
                   try:
                       r = subprocess.run(['yt-dlp', '--flat-playlist', '--dump-json', url], capture_output=True, text=True, encoding='utf-8', check=True)
-                      vids = [json.loads(l) for l in r.stdout.splitlines() if l]; d = PlaylistDialog(vids, self)
+                      vids = [json.loads(l) for l in r.stdout.splitlines() if l]
+                      d = PlaylistDialog(vids, self)
                       if d.exec(): u, q = d.get_selected(); self.run_download(u, q)
-                  except Exception as e: QMessageBox.critical(self, "خطأ", f"بلاي ليست: {e}")
+                  except Exception as e:
+                      QMessageBox.critical(self, "خطأ", f"بلاي ليست: {e}")
+
               def run_download(self, urls, quality):
                   self.centralWidget().setCurrentIndex(1)
-                  for u in urls: item = QListWidgetItem("0% - في الانتظار..."); self.download_list.addItem(item); t = DownloaderThread(u, DOWNLOAD_PATH, quality); t.progress.connect(lambda x,y,i=item:i.setText(f"{y}% - {x}")); t.finished.connect(lambda x,i=item:[i.setText(f"✅ تم: {x}"),self.refresh_library()]); t.start()
-              def refresh_library(self): self.list_files.clear(); [self.list_files.addItem(f) for f in sorted(os.listdir(DOWNLOAD_PATH), reverse=True) if f.endswith(('.mp4','.mp3','.mkv','.webm'))]
+                  if not isinstance(urls, list): urls = [urls]
+                  for u in urls:
+                      item = QListWidgetItem("0% - في الانتظار...")
+                      self.download_list.addItem(item)
+                      t = DownloaderThread(u, DOWNLOAD_PATH, quality)
+                      t.progress.connect(lambda x,y,i=item: i.setText(f"{y}% - {x}"))
+                      t.finished.connect(lambda x,i=item: [i.setText(f"✅ تم: {x}"), self.refresh_library()])
+                      t.start()
 
-          if __name__ == '__main__': app = QApplication(sys.argv); w = MainWindow(); w.show(); sys.exit(app.exec())
-          "@ | Out-File -FilePath main.py -Encoding utf8
+              def refresh_library(self):
+                  self.list_files.clear()
+                  files = [f for f in os.listdir(DOWNLOAD_PATH) if f.endswith(('.mp4','.mp3','.mkv','.webm'))]
+                  for f in sorted(files, reverse=True): self.list_files.addItem(f)
+
+          if __name__ == '__main__':
+              app = QApplication(sys.argv)
+              w = MainWindow()
+              w.show()
+              sys.exit(app.exec())
+          "@
+          Set-Content -Path main.py -Value $code -Encoding UTF8
 
       - name: Create requirements.txt
+        shell: pwsh
         run: |
-          @
+          @"
           PyQt6
           PyQt6-WebEngine
           yt-dlp
           pyinstaller
-          @ | Out-File -FilePath requirements.txt
+          "@ | Set-Content -Path requirements.txt -Encoding UTF8
 
       - name: Install & Build EXE
+        shell: pwsh
         run: |
           pip install -r requirements.txt
-          pyinstaller --onefile --windowed --name SnapTube-KSO main.py
+          pyinstaller --onefile --noconsole --name "SnapTube-KSO" main.py
 
       - name: Upload EXE
         uses: actions/upload-artifact@v4
