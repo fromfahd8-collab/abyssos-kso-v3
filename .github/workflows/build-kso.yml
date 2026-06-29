@@ -1,4 +1,4 @@
-name: Build SnapTube KSO v1.0.1 Python
+name: Build SnapTube KSO v1.0.2 Setup
 on:
   workflow_dispatch:
 jobs:
@@ -6,11 +6,15 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
+    
+    - name: Setup Python
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
+        
     - name: Download yt-dlp.exe
       run: curl -L -o yt-dlp.exe https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe
+      
     - name: Create main.py
       shell: powershell
       run: |
@@ -67,7 +71,7 @@ jobs:
         class Main(QMainWindow):
             def __init__(self):
                 super().__init__()
-                self.setWindowTitle("SnapTube KSO v1.0.1")
+                self.setWindowTitle("SnapTube KSO v1.0.2")
                 self.resize(1200, 800)
                 self.tabs = QTabWidget()
                 self.setCentralWidget(self.tabs)
@@ -104,12 +108,46 @@ jobs:
             w.show()
             sys.exit(app.exec_())
         "@ | Out-File main.py -Encoding utf8
+        
     - name: Install
       run: pip install PyQt5 PyQtWebEngine pyinstaller
+      
     - name: Build EXE
       run: pyinstaller --onefile --windowed --name "SnapTube KSO" --add-data "yt-dlp.exe;." main.py
-    - name: Upload EXE
+      
+    - name: Install Inno Setup
+      run: choco install innosetup -y
+      
+    - name: Create Setup.exe
+      shell: powershell
+      run: |
+        @"
+        [Setup]
+        AppName=SnapTube KSO
+        AppVersion=1.0.2
+        AppPublisher=KSO
+        DefaultDirName={pf}\SnapTube KSO
+        DefaultGroupName=SnapTube KSO
+        OutputDir=dist
+        OutputBaseFilename=SnapTube-KSO-Setup-v1.0.2
+        Compression=lzma2
+        SolidCompression=yes
+        WizardStyle=modern
+        [Files]
+        Source: "dist\SnapTube KSO.exe"; DestDir: "{app}"; Flags: ignoreversion
+        Source: "yt-dlp.exe"; DestDir: "{app}"; Flags: ignoreversion
+        [Icons]
+        Name: "{group}\SnapTube KSO"; Filename: "{app}\SnapTube KSO.exe"
+        Name: "{commondesktop}\SnapTube KSO"; Filename: "{app}\SnapTube KSO.exe"; Tasks: desktopicon
+        [Tasks]
+        Name: "desktopicon"; Description: "Create a &desktop icon"; GroupDescription: "Additional icons:"
+        [Run]
+        Filename: "{app}\SnapTube KSO.exe"; Description: "Launch SnapTube KSO"; Flags: nowait postinstall skipifsilent
+        "@ | Out-File setup.iss -Encoding utf8
+        iscc setup.iss
+      
+    - name: Upload Setup
       uses: actions/upload-artifact@v4
       with:
-        name: SnapTube-KSO-v1.0.1-Windows
-        path: dist/SnapTube KSO.exe
+        name: SnapTube-KSO-Setup-v1.0.2-Windows
+        path: dist/SnapTube-KSO-Setup-v1.0.2.exe
