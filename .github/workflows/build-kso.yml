@@ -1,4 +1,4 @@
-name: Build SnapTube KSO v2.0.2
+name: Build SnapTube KSO v2.0.3
 on:
   workflow_dispatch:
 jobs:
@@ -19,7 +19,7 @@ jobs:
         @"
         {
           "name": "snaptube-kso",
-          "version": "2.0.2",
+          "version": "2.0.3",
           "main": "main.js",
           "description": "SnapTube KSO",
           "author": "KSO",
@@ -29,9 +29,11 @@ jobs:
             "appId": "com.kso.snaptube",
             "productName": "SnapTube KSO",
             "publish": "never",
+            "generateUpdatesFilesForAllChannels": false,
             "files": ["main.js","preload.js","index.html"],
             "extraResources": [{"from":"bin/","to":"bin/"}],
-            "win": { "target": "nsis", "artifactName": "SnapTube-KSO-v2.0.2-Setup.exe" }
+            "nsis": { "blockMap": false },
+            "win": { "target": "nsis", "artifactName": "SnapTube-KSO-v2.0.3-Setup.exe" }
           }
         }
         "@ | Out-File package.json -Encoding ASCII
@@ -60,5 +62,5 @@ jobs:
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: SnapTube-KSO-v2.0.2
+        name: SnapTube-KSO-v2.0.3
         path: dist/*.exe
