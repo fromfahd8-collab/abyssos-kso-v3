@@ -1,4 +1,4 @@
-name: Build SnapTube KSO v1.4.2 [KSO] بدون ايقونة
+name: Build SnapTube KSO v1.4.3 [KSO] ثابت
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '20' }
+        with: { node-version: '18' } # اهم تعديل
 
       - name: Download yt-dlp
         run: |
@@ -21,17 +21,17 @@ jobs:
           @"
           {
             "name": "snaptube-kso",
-            "version": "1.4.2",
+            "version": "1.4.3",
             "main": "main.js",
             "scripts": { "build": "electron-builder --win" },
-            "devDependencies": { "electron": "^30.0.0", "electron-builder": "^24.13.3" },
+            "devDependencies": { "electron": "^28.3.0", "electron-builder": "^24.13.3" },
             "build": { 
               "appId": "com.kso.snaptube", 
               "productName": "SnapTube KSO",
               "publish": "never",
               "files": ["**/*"],
               "extraResources": [{"from": "bin/", "to": "bin/"}],
-              "win": { "target": "nsis", "artifactName": "SnapTube-KSO-v1.4.2-Setup.exe" } 
+              "win": { "target": "nsis", "artifactName": "SnapTube-KSO-v1.4.3-Setup.exe" } 
             }
           }
           "@ | Out-File package.json -Encoding utf8
@@ -47,7 +47,7 @@ jobs:
 
           app.whenReady().then(() => {
             win = new BrowserWindow({ width: 1200, height: 800, webPreferences: { preload: path.join(__dirname, 'preload.js') } });
-            view = new BrowserView({ webPreferences: { preload: path.join(__dirname, 'preload.js') } });
+            view = new BrowserView(); # شلت preload من هنا
             win.setBrowserView(view);
             view.setBounds({ x: 0, y: 60, width: 1200, height: 740 });
             view.webContents.loadURL('https://m.youtube.com');
@@ -66,7 +66,7 @@ jobs:
 
           ipcMain.handle('get-playlist', async (e, url) => {
             return new Promise((resolve) => {
-              exec(`"${ytdlpPath}" --dump-json --flat-playlist --no-download "${url}"`, {maxBuffer: 1024*1024*10}, (err, stdout) => {
+              exec(`"${ytdlpPath}" --dump-json --flat-playlist --no-download "${url}"`, {maxBuffer: 1024*1024*50}, (err, stdout) => { # 50MB للقنوات الكبيرة
                 if(err) return resolve([]);
                 const items = stdout.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
                 resolve(items.map(i => ({id: i.id, title: i.title})));
@@ -116,12 +116,12 @@ jobs:
           <html dir="rtl" lang="ar">
           <head><meta charset="UTF-8"><style>
             body{background:#0f0f0f; color:#fff; font-family: 'Cairo', Arial; margin:0; overflow:hidden;}
-          .header{display:flex; background:#FF0000; padding:10px 15px; gap:15px; align-items:center; height:60px; box-sizing:border-box; box-shadow:0 2px 5px #0005;}
-          .header b{font-size:20px;}
-          .header button{background:#0003; border:0; color:white; padding:8px 15px; border-radius:20px; cursor:pointer; font-size:14px; font-weight:bold;}
-          .header button:hover{background:#0006;}
-          .card{background:#1e1e1e; padding:12px; margin:10px 0; border-radius:12px; display:flex; justify-content:space-between; align-items:center;}
-          .card button{background:#FF0000; border:0; color:white; border-radius:8px; padding:6px 12px; cursor:pointer;}
+         .header{display:flex; background:#FF0000; padding:10px 15px; gap:15px; align-items:center; height:60px; box-sizing:border-box; box-shadow:0 2px 5px #0005;}
+         .header b{font-size:20px;}
+         .header button{background:#0003; border:0; color:white; padding:8px 15px; border-radius:20px; cursor:pointer; font-size:14px; font-weight:bold;}
+         .header button:hover{background:#0006;}
+         .card{background:#1e1e1e; padding:12px; margin:10px 0; border-radius:12px; display:flex; justify-content:space-between; align-items:center;}
+         .card button{background:#FF0000; border:0; color:white; border-radius:8px; padding:6px 12px; cursor:pointer;}
             #popup{background:#1a1a1a; margin:5% auto; padding:20px; width:90%; max-width:700px; border-radius:15px; text-align:right;}
             #popup select, #popup button{padding:8px 12px; border-radius:8px; border:0; margin:5px; font-weight:bold;}
             #popup button:first-of-type{background:#FF0000; color:white;}
@@ -192,4 +192,4 @@ jobs:
 
       - name: Upload EXE Artifact
         uses: actions/upload-artifact@v4
-        with: { name: SnapTube-KSO-v1.4.2, path: dist/SnapTube-KSO-v1.4.2-Setup.exe }
+        with: { name: SnapTube-KSO-v1.4.3, path: dist/SnapTube-KSO-v1.4.3-Setup.exe }
