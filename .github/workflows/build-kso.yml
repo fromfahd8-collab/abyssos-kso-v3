@@ -1,52 +1,129 @@
-name: Build KSO-HANI V34.FINAL11 - [KSO]
-on: workflow_dispatch
+name: Build SnapTube KSO v1.1 [KSO] EXE
+
+on:
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: windows-latest
     steps:
-      - name: Install tools
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - name: Download yt-dlp
+        run: Invoke-WebRequest -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" -OutFile "yt-dlp.exe"
+
+      - name: Create All Files
         run: |
-          sudo apt-get update
-          sudo apt-get install -y debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin mtools
-
-      - name: Build RootFS + Kernel [KSO]
-        run: |
-          sudo debootstrap --arch=amd64 noble rootfs http://archive.ubuntu.com/ubuntu/
-          echo 'deb http://archive.ubuntu.com/ubuntu noble main universe' | sudo tee rootfs/etc/apt/sources.list
-          sudo chroot rootfs apt-get update
+          @"
+          {
+            "name": "snaptube-kso",
+            "version": "1.1.0",
+            "main": "main.js",
+            "scripts": { "build": "electron-builder --win" },
+            "devDependencies": { "electron": "^31.0.0", "electron-builder": "^24.13.3" },
+            "build": { 
+              "appId": "com.kso.snaptube", 
+              "files": ["**/*", "yt-dlp.exe"],
+              "win": { "target": "nsis", "artifactName": "SnapTube-KSO-v1.1-Setup.exe" } 
+            }
+          }
+          "@ | Out-File package.json -Encoding utf8
           
-          sudo chroot rootfs apt-get install -y --no-install-recommends linux-generic gnome-games lzip i3 minetest initramfs-tools
+          @"
+          const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+          const path = require('path'); const { spawn } = require('child_process'); const fs = require('fs');
           
-          sudo mkdir -p iso/boot
-          sudo cp rootfs/boot/vmlinuz-* iso/boot/vmlinuz
-          sudo chmod 644 iso/boot/vmlinuz 
-          KERNEL_VER=$(ls rootfs/boot/vmlinuz-* | sed 's/.*vmlinuz-//')
-          sudo chroot rootfs update-initramfs -c -k $KERNEL_VER
-          sudo cp rootfs/boot/initrd.img-$KERNEL_VER iso/boot/initrd.img
-          sudo chmod 644 iso/boot/initrd.img
+          let downloadPath = app.getPath('downloads') + '\\SnapTube-KSO';
+          if(!fs.existsSync(downloadPath)) fs.mkdirSync(downloadPath);
+          let activeDownloads = new Map(); let watcher;
+          let win;
+          
+          function startWatcher(){
+            if(watcher) watcher.close();
+            watcher = fs.watch(downloadPath, (event, filename)=>{
+              if(event==='rename'){ win.webContents.send('rescan-folder'); }
+            });
+          }
 
-          sudo mkdir -p rootfs/etc/skel/.config/i3
-          echo '# KSO-HANI V34.FINAL11' | sudo tee rootfs/etc/skel/.config/i3/config
-          echo 'bindsym $mod+g exec gnome-games' | sudo tee -a rootfs/etc/skel/.config/i3/config
-          echo 'bindsym $mod+m exec minetest' | sudo tee -a rootfs/etc/skel/.config/i3/config
-          echo 'bindsym $mod+q exec shutdown now' | sudo tee -a rootfs/etc/skel/.config/i3/config
+          app.whenReady().then(() => {
+            win = new BrowserWindow({ width: 1200, height: 800, webPreferences: { preload: path.join(__dirname, 'preload.js'), webviewTag: true } });
+            win.loadFile('index.html'); startWatcher();
+            win.webContents.session.webRequest.onBeforeRequest((details, cb) => {
+              if(details.url.includes('ads') || details.url.includes('doubleclick') || details.url.includes('googlesyndication')) cb({cancel: true}); else cb({cancel: false});
+            });
+          });
 
-          sudo mkdir -p rootfs/etc/systemd/system/getty@tty1.service.d
-          echo -e '[Service]\nExecStart=\nExecStart=-/sbin/agetty --autologin root --noclear %I $TERM' | sudo tee rootfs/etc/systemd/system/getty@tty1.service.d/override.conf
+          ipcMain.handle('pick-folder', async () => {
+            const { filePaths } = await dialog.showOpenDialog({properties: ['openDirectory']});
+            if(filePaths[0]){ downloadPath = filePaths[0]; startWatcher(); }
+            return downloadPath;
+          });
 
-          sudo mkdir -p iso/casper
-          sudo mksquashfs rootfs iso/casper/filesystem.squashfs -comp xz -b 1048576 -no-xattrs
+          ipcMain.handle('download', (e, url) => {
+            const id = Date.now().toString();
+            const ytdlp = spawn('yt-dlp.exe', ['-o', `${downloadPath}\\%(title)s.%(ext)s`, '--progress', '--newline', url]);
+            activeDownloads.set(id, {status: 'جاري', progress: 0, title:'فيديو...', path:''});
+            ytdlp.stdout.on('data', d => { const str = d.toString(); const match = str.match(/(\d+\.\d+)%/); if(match){ activeDownloads.get(id).progress = parseFloat(match[1]); win.webContents.send('progress', {id, progress: match[1]}); } const dest = str.match(/Destination: (.+)/); if(dest){ activeDownloads.get(id).path = dest[1].trim(); activeDownloads.get(id).title = path.basename(dest[1]); } });
+            ytdlp.on('close', () => { if(activeDownloads.has(id)){ activeDownloads.get(id).status = 'تم'; win.webContents.send('progress', {id, status: 'تم'}); }});
+            return id;
+          });
 
-          # <--- التعديل النهائي لـ GRUB FM [KSO]
-          sudo mkdir -p iso/boot/grub
-          echo -e 'set timeout=5\nset default=0\nset menu_color_normal=green/black\nset menu_color_highlight=white/green\necho "========================================"\necho " KSO-HANI V34.FINAL11 [KSO]"\necho " برمجة عبد الله و عبد الرحمن هاني [KSO]"\necho " Win+G = Games | Win+M = Minetest"\necho "========================================"\nmenuentry "KSO-HANI V34.FINAL11 Live [KSO]" {\n set isofile="/KSO-HANI-V34.FINAL11.iso"\n loopback kso_loop $isofile\n linux (kso_loop)/casper/vmlinuz boot=casper iso-scan/filename=$isofile noprompt noeject nomodeset toram ---\n initrd (kso_loop)/casper/initrd\n}' | sudo tee iso/boot/grub/grub.cfg > /dev/null
+          ipcMain.handle('get-files', () => {
+            try { return fs.readdirSync(downloadPath).filter(f=>f.endsWith('.mp4')||f.endsWith('.mp3')||f.endsWith('.mkv')||f.endsWith('.webm')).map(f=>({name:f, path:path.join(downloadPath,f)})); }
+            catch { return []; }
+          });
 
-          sudo grub-mkrescue -o KSO-HANI-V34.FINAL11.iso iso
-          ls -lh KSO-HANI-V34.FINAL11.iso
+          ipcMain.handle('delete-file', (e, p) => { try{ fs.unlinkSync(p); }catch{} });
+          ipcMain.handle('open-folder', () => { shell.openPath(downloadPath); });
+          "@ | Out-File main.js -Encoding utf8
+          
+          @"
+          const { contextBridge, ipcRenderer } = require('electron');
+          contextBridge.exposeInMainWorld('kso', {
+            download: (url) => ipcRenderer.invoke('download', url),
+            pickFolder: () => ipcRenderer.invoke('pick-folder'),
+            getFiles: () => ipcRenderer.invoke('get-files'),
+            deleteFile: (p) => ipcRenderer.invoke('delete-file', p),
+            openFolder: () => ipcRenderer.invoke('open-folder'),
+            onProgress: (cb) => ipcRenderer.on('progress', (_, data) => cb(data)),
+            onRescan: (cb) => ipcRenderer.on('rescan-folder', () => cb())
+          });
+          "@ | Out-File preload.js -Encoding utf8
+          
+          @"
+          <body style="background:#0f0f0f; color:white; font-family:Arial; margin:0;">
+            <div style="display:flex; background:#181818; padding:8px; gap:10px; align-items:center;">
+              <b style="color:#FF0000;">SnapTube [KSO] v1.1</b> 
+              <button onclick="showTab('browser')">🏠 تصفح</button>
+              <button onclick="showTab('downloads')">📁 مكتبتي</button>
+              <button onclick="kso.pickFolder()">📂 مسار: <span id="path"></span></button>
+            </div>
+            <webview id="browser" src="https://www.youtube.com" style="width:100%; height:95vh;"></webview>
+            <div id="downloads" style="display:none; padding:15px; height:95vh; overflow:auto;">
+              <h3>كل الفيديوهات في المسار</h3>
+              <button onclick="kso.openFolder()">📂 فتح الفولدر</button>
+              <div id="list"></div>
+            </div>
+            <script>
+              function showTab(tab){ document.getElementById('browser').style.display = tab==='browser'?'block':'none'; document.getElementById('downloads').style.display = tab==='downloads'?'block':'none'; if(tab==='downloads') loadFiles(); }
+              async function loadFiles(){ const files = await kso.getFiles(); document.getElementById('list').innerHTML = files.length? files.map(f=>`<div style="background:#222; padding:10px; margin:8px 0; border-radius:8px; display:flex; justify-content:space-between; align-items:center;"><div>🎬 ${f.name}</div><button onclick="kso.deleteFile('${f.path.replace(/'/g, "\\'")}').then(loadFiles)" style="background:red; border:0; color:white; border-radius:6px; padding:5px 10px;">🗑️ حذف</button></div>`).join('') : '<div>مفيش ملفات هنا</div>'; }
+              kso.onRescan(()=>{ if(document.getElementById('downloads').style.display==='block') loadFiles(); });
+              kso.pickFolder().then(p=>document.getElementById('path').innerText=p.split('\\').pop());
+              const webview = document.getElementById('browser');
+              webview.addEventListener('dom-ready', () => { webview.executeJavaScript(` setInterval(()=>{ let v = document.querySelector('video'); if(v &&!document.getElementById('ksoBtn')){ let b = document.createElement('button'); b.id='ksoBtn'; b.innerText='⬇️ [KSO]'; b.style='position:fixed;top:10px;right:10px;z-index:999;background:#FF0000;color:white;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:14px;'; b.onclick=()=>window.kso.download(window.location.href); document.body.appendChild(b); } },1000); `); });
+            </script>
+          </body>
+          "@ | Out-File index.html -Encoding utf8
 
-      - name: Upload ISO [KSO]
+      - name: Install
+        run: cmd /c "npm install --legacy-peer-deps"
+      
+      - name: Build EXE
+        run: cmd /c "npm run build"
+
+      - name: Upload EXE Artifact
         uses: actions/upload-artifact@v4
-        with:
-          name: KSO-HANI-V34.FINAL11-[KSO]
-          path: KSO-HANI-V34.FINAL11.iso
+        with: { name: SnapTube-KSO-v1.1, path: dist/SnapTube-KSO-v1.1-Setup.exe }
