@@ -19,7 +19,7 @@ jobs:
           @"
           {
             "name": "snaptube-kso",
-            "version": "1.1.0",
+            "version": "1.1.1",
             "main": "main.js",
             "scripts": { "build": "electron-builder --win" },
             "devDependencies": { "electron": "^31.0.0", "electron-builder": "^24.13.3" },
@@ -33,41 +33,44 @@ jobs:
           "@ | Out-File package.json -Encoding utf8
           
           @"
-          const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+          const { app, BrowserWindow, ipcMain, dialog, shell, BrowserView } = require('electron');
           const path = require('path'); const { spawn } = require('child_process'); const fs = require('fs');
           
           let downloadPath = app.getPath('downloads') + '\\SnapTube-KSO';
           if(!fs.existsSync(downloadPath)) fs.mkdirSync(downloadPath);
-          let activeDownloads = new Map(); let watcher;
-          let win;
-          
-          function startWatcher(){
-            if(watcher) watcher.close();
-            watcher = fs.watch(downloadPath, (event, filename)=>{
-              if(event==='rename'){ win.webContents.send('rescan-folder'); }
-            });
-          }
+          let win; let view; let currentTab = 'browser';
 
           app.whenReady().then(() => {
-            win = new BrowserWindow({ width: 1200, height: 800, webPreferences: { preload: path.join(__dirname, 'preload.js'), webviewTag: true } });
-            win.loadFile('index.html'); startWatcher();
-            win.webContents.session.webRequest.onBeforeRequest((details, cb) => {
+            win = new BrowserWindow({ width: 1200, height: 800, webPreferences: { preload: path.join(__dirname, 'preload.js') } });
+            view = new BrowserView({ webPreferences: { preload: path.join(__dirname, 'preload.js') } });
+            win.setBrowserView(view);
+            view.setBounds({ x: 0, y: 50, width: 1200, height: 750 });
+            view.webContents.loadURL('https://www.youtube.com');
+            view.webContents.session.webRequest.onBeforeRequest((details, cb) => {
               if(details.url.includes('ads') || details.url.includes('doubleclick') || details.url.includes('googlesyndication')) cb({cancel: true}); else cb({cancel: false});
             });
+            view.webContents.on('dom-ready', () => {
+              view.webContents.executeJavaScript(` setInterval(()=>{ let v = document.querySelector('video'); if(v &&!document.getElementById('ksoBtn')){ let b = document.createElement('button'); b.id='ksoBtn'; b.innerText='⬇️ [KSO]'; b.style='position:fixed;top:10px;right:10px;z-index:999;background:#FF0000;color:white;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:14px;'; b.onclick=()=>window.kso.download(window.location.href); document.body.appendChild(b); } },1000); `);
+            });
+            win.loadFile('index.html');
+
+            win.on('resize', () => { const [w, h] = win.getContentSize(); if(currentTab==='browser'){ view.setBounds({ x: 0, y: 50, width: w, height: h-50 }); } });
           });
+
+          ipcMain.on('show-browser', ()=>{ currentTab='browser'; view.setBounds({ x: 0, y: 50, width: win.getContentSize()[0], height: win.getContentSize()[1]-50 });
+          ipcMain.on('hide-browser', ()=>{ currentTab='downloads'; view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
 
           ipcMain.handle('pick-folder', async () => {
             const { filePaths } = await dialog.showOpenDialog({properties: ['openDirectory']});
-            if(filePaths[0]){ downloadPath = filePaths[0]; startWatcher(); }
+            if(filePaths[0]){ downloadPath = filePaths[0]; }
             return downloadPath;
           });
 
           ipcMain.handle('download', (e, url) => {
             const id = Date.now().toString();
             const ytdlp = spawn('yt-dlp.exe', ['-o', `${downloadPath}\\%(title)s.%(ext)s`, '--progress', '--newline', url]);
-            activeDownloads.set(id, {status: 'جاري', progress: 0, title:'فيديو...', path:''});
-            ytdlp.stdout.on('data', d => { const str = d.toString(); const match = str.match(/(\d+\.\d+)%/); if(match){ activeDownloads.get(id).progress = parseFloat(match[1]); win.webContents.send('progress', {id, progress: match[1]}); } const dest = str.match(/Destination: (.+)/); if(dest){ activeDownloads.get(id).path = dest[1].trim(); activeDownloads.get(id).title = path.basename(dest[1]); } });
-            ytdlp.on('close', () => { if(activeDownloads.has(id)){ activeDownloads.get(id).status = 'تم'; win.webContents.send('progress', {id, status: 'تم'}); }});
+            ytdlp.stdout.on('data', d => { const str = d.toString(); const match = str.match(/(\d+\.\d+)%/); if(match){ win.webContents.send('progress', {id, progress: match[1]}); } });
+            ytdlp.on('close', () => { win.webContents.send('progress', {id, status: 'تم'}); win.webContents.send('rescan-folder'); });
             return id;
           });
 
@@ -89,31 +92,33 @@ jobs:
             deleteFile: (p) => ipcRenderer.invoke('delete-file', p),
             openFolder: () => ipcRenderer.invoke('open-folder'),
             onProgress: (cb) => ipcRenderer.on('progress', (_, data) => cb(data)),
-            onRescan: (cb) => ipcRenderer.on('rescan-folder', () => cb())
+            onRescan: (cb) => ipcRenderer.on('rescan-folder', () => cb()),
+            showBrowser: () => ipcRenderer.send('show-browser'),
+            hideBrowser: () => ipcRenderer.send('hide-browser')
           });
           "@ | Out-File preload.js -Encoding utf8
           
           @"
-          <body style="background:#0f0f0f; color:white; font-family:Arial; margin:0;">
-            <div style="display:flex; background:#181818; padding:8px; gap:10px; align-items:center;">
+          <body style="background:#0f0f0f; color:white; font-family:Arial; margin:0; overflow:hidden;">
+            <div style="display:flex; background:#181818; padding:8px; gap:10px; align-items:center; height:50px; box-sizing:border-box;">
               <b style="color:#FF0000;">SnapTube [KSO] v1.1</b> 
               <button onclick="showTab('browser')">🏠 تصفح</button>
               <button onclick="showTab('downloads')">📁 مكتبتي</button>
-              <button onclick="kso.pickFolder()">📂 مسار: <span id="path"></span></button>
+              <button onclick="kso.pickFolder().then(p=>document.getElementById('path').innerText=p.split('\\').pop())">📂 مسار: <span id="path"></span></button>
             </div>
-            <webview id="browser" src="https://www.youtube.com" style="width:100%; height:95vh;"></webview>
-            <div id="downloads" style="display:none; padding:15px; height:95vh; overflow:auto;">
+            <div id="downloads" style="display:none; padding:15px; height:calc(100vh - 50px); overflow:auto;">
               <h3>كل الفيديوهات في المسار</h3>
               <button onclick="kso.openFolder()">📂 فتح الفولدر</button>
               <div id="list"></div>
             </div>
             <script>
-              function showTab(tab){ document.getElementById('browser').style.display = tab==='browser'?'block':'none'; document.getElementById('downloads').style.display = tab==='downloads'?'block':'none'; if(tab==='downloads') loadFiles(); }
+              function showTab(tab){ 
+                if(tab==='browser'){ document.getElementById('downloads').style.display='none'; kso.showBrowser(); } 
+                else { document.getElementById('downloads').style.display='block'; kso.hideBrowser(); loadFiles(); } 
+              }
               async function loadFiles(){ const files = await kso.getFiles(); document.getElementById('list').innerHTML = files.length? files.map(f=>`<div style="background:#222; padding:10px; margin:8px 0; border-radius:8px; display:flex; justify-content:space-between; align-items:center;"><div>🎬 ${f.name}</div><button onclick="kso.deleteFile('${f.path.replace(/'/g, "\\'")}').then(loadFiles)" style="background:red; border:0; color:white; border-radius:6px; padding:5px 10px;">🗑️ حذف</button></div>`).join('') : '<div>مفيش ملفات هنا</div>'; }
               kso.onRescan(()=>{ if(document.getElementById('downloads').style.display==='block') loadFiles(); });
               kso.pickFolder().then(p=>document.getElementById('path').innerText=p.split('\\').pop());
-              const webview = document.getElementById('browser');
-              webview.addEventListener('dom-ready', () => { webview.executeJavaScript(` setInterval(()=>{ let v = document.querySelector('video'); if(v &&!document.getElementById('ksoBtn')){ let b = document.createElement('button'); b.id='ksoBtn'; b.innerText='⬇️ [KSO]'; b.style='position:fixed;top:10px;right:10px;z-index:999;background:#FF0000;color:white;border:0;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:14px;'; b.onclick=()=>window.kso.download(window.location.href); document.body.appendChild(b); } },1000); `); });
             </script>
           </body>
           "@ | Out-File index.html -Encoding utf8
