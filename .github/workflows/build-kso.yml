@@ -15,7 +15,7 @@ jobs:
           import sys, os, subprocess, json
           from PyQt6.QtWidgets import *
           from PyQt6.QtWebEngineWidgets import QWebEngineView
-          from PyQt6.QtCore import QUrl, QThread, pyqtSignal, QObject, Qt
+          from PyQt6.QtCore import QUrl, QThread, pyqtSignal, QObject, Qt, pyqtSlot
           from PyQt6.QtWebChannel import QWebChannel
 
           DOWNLOAD_PATH = os.path.join(os.path.expanduser('~'), 'Downloads', 'SnapTube-KSO')
@@ -55,7 +55,7 @@ jobs:
 
           class MainWindow(QMainWindow):
               def __init__(self):
-                  super().__init__(); self.setWindowTitle("سناب تيوب كسو v1.0.6"); self.resize(1000, 700)
+                  super().__init__(); self.setWindowTitle("سناب تيوب كسو v1.0.7"); self.resize(1000, 700)
                   tabs = QTabWidget(); tabs.setTabPosition(QTabWidget.TabPosition.South); self.setCentralWidget(tabs)
                   self.browser = QWebEngineView(); self.browser.setUrl(QUrl("https://m.youtube.com/")); self.browser.loadFinished.connect(self.inject_downloader); tabs.addTab(self.browser, "🏠 رئيسية")
                   self.download_list = QListWidget(); tabs.addTab(self.download_list, "⬇️ التحميلات")
